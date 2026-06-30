@@ -1,0 +1,784 @@
+---
+title: "如何设计一个专业的安全扫描报告系统？从数据模型到多格式输出"
+date: 2026-06-30
+description: "深度讲解漏洞扫描报告系统的完整设计。从漏洞结果模型、HTML安全模板渲染、JSON结构化输出到TXT快速导出，8个实战步骤掌握多格式报告生成。包含XSS防护、证据追溯、去重机制等核心实现。适合安全工具开发者、后端工程师。"
+author: "NickLinus"
+category: "安全架构/安全编码/漏洞扫描/安全工具开发"
+thumbnail: ""
+published: true
+---
+
+## 📋 目录
+
+- [背景介绍](#背景介绍)
+- [核心挑战](#核心挑战)
+- [解决方案](#解决方案)
+- [完整实现](#完整实现)
+- [测试策略](#测试策略)
+- [最容易踩的5个坑](#最容易踩的5个坑)
+- [面试高频考点](#面试高频考点)
+- [总结与扩展](#总结与扩展)
+
+---
+
+## 背景介绍
+
+漏洞扫描器的最终产物不是控制台日志，而是**可交付、可追溯、可复核的扫描报告**。
+
+对 xray 这类工具来说，报告输出至少要满足三类人：
+
+```md
+安全工程师
+├── 需要漏洞详情
+├── 需要请求响应证据
+└── 需要复核误报
+
+开发团队
+├── 需要影响路径
+├── 需要修复建议
+└── 需要优先级
+
+自动化平台
+├── 需要JSON结构
+├── 需要稳定字段
+└── 需要可导入CI/CD或工单系统
+```
+
+xray README 中提供了典型输出参数：
+
+```bash
+xray webscan --url http://example.com/?a=b \
+  --text-output result.txt \
+  --json-output result.json \
+  --html-output report.html
+```
+
+这说明报告系统不是单一模板渲染，而是“同一份漏洞数据，多种输出视图”。
+
+---
+
+## 核心挑战
+
+### 挑战1：漏洞结果要结构化
+
+如果扫描过程中只拼接字符串，后续很难输出多种格式。
+
+**不推荐**
+```text
+发现SQL注入，URL是xxx，等级是高危，参数是id
+```
+
+**推荐**
+
+```json
+{
+  "plugin": "sqldet",
+  "target": "https://example.com/item?id=1",
+  "param": "id",
+  "severity": "high",
+  "evidence": ["boolean condition changed response"],
+  "recommendation": "Use parameterized queries"
+}
+```
+
+结构化数据是报告系统的基础。
+
+### 挑战2：HTML报告要兼顾可读性和安全性
+
+HTML报告最适合人工阅读，但也最容易出问题。
+
+扫描结果中包含的内容可能来自目标站点：
+
+- URL
+- 参数值
+- 响应片段
+- Header
+- 回调内容
+- 错误信息
+
+这些内容都不可信。如果直接写入 HTML，报告本身可能出现 XSS 风险。
+
+### 挑战3：多格式输出不能重复实现
+
+常见输出格式：
+
+```md
+HTML
+├── 面向人阅读
+├── 需要排序、筛选、样式
+└── 适合交付
+
+JSON
+├── 面向机器消费
+├── 字段稳定
+└── 适合集成平台
+
+TXT
+├── 面向终端快速查看
+├── 简洁
+└── 适合日志归档
+```
+
+如果每种格式各自拼接一套数据，很快就会出现字段不一致。
+
+### 挑战4：报告生成要支持流式和增量
+
+大型扫描任务可能产生很多结果。
+
+如果所有结果都放内存，最后一次性渲染，会有三个问题：
+
+- 扫描中途崩溃，结果丢失
+- 大报告占用大量内存
+- 用户无法提前查看阶段性结果
+
+因此输出系统要考虑：
+
+- JSON Lines 增量写入
+- HTML 最终汇总
+- TXT 实时追加
+- 结束时生成索引和统计信息
+
+---
+
+## 解决方案
+
+### 架构设计
+
+```md
+┌───────────────────────────────┐
+│        Detection Engine        │
+└───────────────┬───────────────┘
+                │ VulnResult
+                ▼
+┌───────────────────────────────┐
+│        Result Normalizer       │
+│  severity / evidence / tags    │
+└───────────────┬───────────────┘
+                │
+                ▼
+┌───────────────────────────────┐
+│          Report Store          │
+│  memory / jsonl / sqlite       │
+└───────────────┬───────────────┘
+                │
+        ┌───────┼────────┐
+        ▼       ▼        ▼
+   HTML Writer JSON Writer TXT Writer
+```
+
+### 输出设计原则
+
+1. **统一数据模型**：所有输出格式都从 `VulnResult` 派生
+2. **格式层只负责呈现**：不要在 HTML Writer 中重新计算漏洞等级
+3. **证据可追溯**：每条漏洞都保留关键请求、响应、检测插件
+4. **报告可安全打开**：所有不可信内容都要转义
+5. **字段兼容性优先**：JSON字段新增可以，删除和改名要谨慎
+
+---
+
+## 完整实现
+
+### 步骤1：漏洞结果模型
+
+**pkg/report/model.go**
+```go
+package report
+
+import "time"
+
+type Severity string
+
+const (
+    SeverityCritical Severity = "critical"
+    SeverityHigh     Severity = "high"
+    SeverityMedium   Severity = "medium"
+    SeverityLow      Severity = "low"
+    SeverityInfo     Severity = "info"
+)
+
+type VulnResult struct {
+    ID             string            `json:"id"`
+    Target         string            `json:"target"`
+    URL            string            `json:"url"`
+    Plugin         string            `json:"plugin"`
+    VulnType       string            `json:"vuln_type"`
+    Severity       Severity          `json:"severity"`
+    Title          string            `json:"title"`
+    Description    string            `json:"description"`
+    Evidence       []Evidence        `json:"evidence"`
+    Recommendation string            `json:"recommendation"`
+    Tags           []string          `json:"tags"`
+    Extra          map[string]string `json:"extra,omitempty"`
+    CreatedAt      time.Time         `json:"created_at"`
+}
+
+type Evidence struct {
+    Type    string `json:"type"`
+    Summary string `json:"summary"`
+    Request string `json:"request,omitempty"`
+    Response string `json:"response,omitempty"`
+}
+
+type ScanReport struct {
+    TaskID    string       `json:"task_id"`
+    StartedAt time.Time    `json:"started_at"`
+    EndedAt   time.Time    `json:"ended_at"`
+    Summary   Summary      `json:"summary"`
+    Results   []VulnResult `json:"results"`
+}
+
+type Summary struct {
+    Total    int            `json:"total"`
+    ByLevel  map[Severity]int `json:"by_level"`
+    ByPlugin map[string]int `json:"by_plugin"`
+}
+```
+
+### 步骤2：结果归一化
+
+**pkg/report/normalize.go**
+```go
+package report
+
+import (
+    "crypto/sha1"
+    "encoding/hex"
+    "strings"
+    "time"
+)
+
+func Normalize(result VulnResult) VulnResult {
+    result.URL = strings.TrimSpace(result.URL)
+    result.Target = strings.TrimSpace(result.Target)
+    result.Plugin = strings.TrimSpace(result.Plugin)
+    result.VulnType = strings.TrimSpace(result.VulnType)
+
+    if result.CreatedAt.IsZero() {
+        result.CreatedAt = time.Now()
+    }
+    if result.ID == "" {
+        result.ID = buildResultID(result)
+    }
+    if result.Extra == nil {
+        result.Extra = map[string]string{}
+    }
+    return result
+}
+
+func buildResultID(result VulnResult) string {
+    raw := strings.Join([]string{
+        result.Target,
+        result.URL,
+        result.Plugin,
+        result.VulnType,
+        string(result.Severity),
+    }, "|")
+    sum := sha1.Sum([]byte(raw))
+    return hex.EncodeToString(sum[:])
+}
+```
+
+ID 的作用是去重、引用和平台集成，不应该依赖数组下标。
+
+### 步骤3：报告收集器
+
+**pkg/report/collector.go**
+```go
+package report
+
+import "sync"
+
+type Collector struct {
+    mu      sync.Mutex
+    seen    map[string]struct{}
+    results []VulnResult
+}
+
+func NewCollector() *Collector {
+    return &Collector{
+        seen: map[string]struct{}{},
+    }
+}
+
+func (c *Collector) Add(result VulnResult) bool {
+    normalized := Normalize(result)
+
+    c.mu.Lock()
+    defer c.mu.Unlock()
+
+    if _, ok := c.seen[normalized.ID]; ok {
+        return false
+    }
+    c.seen[normalized.ID] = struct{}{}
+    c.results = append(c.results, normalized)
+    return true
+}
+
+func (c *Collector) Results() []VulnResult {
+    c.mu.Lock()
+    defer c.mu.Unlock()
+
+    out := make([]VulnResult, len(c.results))
+    copy(out, c.results)
+    return out
+}
+```
+
+### 步骤4：JSON输出
+
+**pkg/report/json_writer.go**
+```go
+package report
+
+import (
+    "encoding/json"
+    "io"
+)
+
+type JSONWriter struct {
+    Pretty bool
+}
+
+func (w JSONWriter) Write(out io.Writer, report ScanReport) error {
+    enc := json.NewEncoder(out)
+    enc.SetEscapeHTML(true)
+    if w.Pretty {
+        enc.SetIndent("", "  ")
+    }
+    return enc.Encode(report)
+}
+```
+
+JSON 也建议开启 HTML 字符转义，因为这些 JSON 很可能会被嵌入到 HTML 报告模板中。
+
+### 步骤5：TXT输出
+
+**pkg/report/text_writer.go**
+```go
+package report
+
+import (
+    "fmt"
+    "io"
+)
+
+type TextWriter struct{}
+
+func (w TextWriter) Write(out io.Writer, report ScanReport) error {
+    _, err := fmt.Fprintf(out, "Task: %s\nTotal: %d\n\n", report.TaskID, report.Summary.Total)
+    if err != nil {
+        return err
+    }
+
+    for _, item := range report.Results {
+        if _, err := fmt.Fprintf(out, "[%s] %s\n", item.Severity, item.Title); err != nil {
+            return err
+        }
+        if _, err := fmt.Fprintf(out, "URL: %s\nPlugin: %s\n", item.URL, item.Plugin); err != nil {
+            return err
+        }
+        for _, evidence := range item.Evidence {
+            if _, err := fmt.Fprintf(out, "- %s: %s\n", evidence.Type, evidence.Summary); err != nil {
+                return err
+            }
+        }
+        if _, err := fmt.Fprintln(out); err != nil {
+            return err
+        }
+    }
+    return nil
+}
+```
+
+TXT 不追求样式，只追求快速定位关键信息。
+
+### 步骤6：HTML模板渲染
+
+**pkg/report/html_writer.go**
+```go
+package report
+
+import (
+    "html/template"
+    "io"
+)
+
+type HTMLWriter struct {
+    tmpl *template.Template
+}
+
+func NewHTMLWriter() (*HTMLWriter, error) {
+    tmpl, err := template.New("report").Funcs(template.FuncMap{
+        "severityClass": severityClass,
+    }).Parse(reportTemplate)
+    if err != nil {
+        return nil, err
+    }
+    return &HTMLWriter{tmpl: tmpl}, nil
+}
+
+func (w *HTMLWriter) Write(out io.Writer, report ScanReport) error {
+    return w.tmpl.Execute(out, report)
+}
+
+func severityClass(s Severity) string {
+    switch s {
+    case SeverityCritical:
+        return "critical"
+    case SeverityHigh:
+        return "high"
+    case SeverityMedium:
+        return "medium"
+    case SeverityLow:
+        return "low"
+    default:
+        return "info"
+    }
+}
+```
+
+**pkg/report/template.go**
+```go
+package report
+
+const reportTemplate = `<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>Scan Report</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 32px; color: #222; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border-bottom: 1px solid #eee; padding: 10px; text-align: left; vertical-align: top; }
+    .critical { color: #9f1239; font-weight: 700; }
+    .high { color: #b91c1c; font-weight: 700; }
+    .medium { color: #b45309; font-weight: 700; }
+    .low { color: #2563eb; font-weight: 700; }
+    .info { color: #475569; }
+    pre { white-space: pre-wrap; background: #f8fafc; padding: 12px; overflow: auto; }
+  </style>
+</head>
+<body>
+  <h1>Scan Report</h1>
+  <p>Task: {{ .TaskID }}</p>
+  <p>Total: {{ .Summary.Total }}</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Severity</th>
+        <th>Title</th>
+        <th>URL</th>
+        <th>Plugin</th>
+        <th>Evidence</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{ range .Results }}
+      <tr>
+        <td class="{{ severityClass .Severity }}">{{ .Severity }}</td>
+        <td>{{ .Title }}</td>
+        <td>{{ .URL }}</td>
+        <td>{{ .Plugin }}</td>
+        <td>
+          {{ range .Evidence }}
+          <strong>{{ .Type }}</strong>
+          <pre>{{ .Summary }}</pre>
+          {{ end }}
+        </td>
+      </tr>
+      {{ end }}
+    </tbody>
+  </table>
+</body>
+</html>`
+```
+
+这里使用 `html/template` 而不是 `text/template`，因为前者会自动做上下文感知转义。
+
+### 步骤7：统一输出入口
+
+**pkg/report/exporter.go**
+```go
+package report
+
+import (
+    "os"
+    "time"
+)
+
+type ExportOptions struct {
+    HTMLPath string
+    JSONPath string
+    TextPath string
+}
+
+func Export(taskID string, results []VulnResult, options ExportOptions) error {
+    report := BuildReport(taskID, results)
+
+    if options.JSONPath != "" {
+        if err := writeFile(options.JSONPath, func(file *os.File) error {
+            return JSONWriter{Pretty: true}.Write(file, report)
+        }); err != nil {
+            return err
+        }
+    }
+
+    if options.TextPath != "" {
+        if err := writeFile(options.TextPath, func(file *os.File) error {
+            return TextWriter{}.Write(file, report)
+        }); err != nil {
+            return err
+        }
+    }
+
+    if options.HTMLPath != "" {
+        writer, err := NewHTMLWriter()
+        if err != nil {
+            return err
+        }
+        if err := writeFile(options.HTMLPath, func(file *os.File) error {
+            return writer.Write(file, report)
+        }); err != nil {
+            return err
+        }
+    }
+
+    return nil
+}
+
+func BuildReport(taskID string, results []VulnResult) ScanReport {
+    summary := Summary{
+        ByLevel:  map[Severity]int{},
+        ByPlugin: map[string]int{},
+    }
+    for i := range results {
+        results[i] = Normalize(results[i])
+        summary.Total++
+        summary.ByLevel[results[i].Severity]++
+        summary.ByPlugin[results[i].Plugin]++
+    }
+
+    return ScanReport{
+        TaskID:    taskID,
+        StartedAt: time.Now(),
+        EndedAt:   time.Now(),
+        Summary:   summary,
+        Results:   results,
+    }
+}
+
+func writeFile(path string, fn func(*os.File) error) error {
+    file, err := os.Create(path)
+    if err != nil {
+        return err
+    }
+    defer file.Close()
+    return fn(file)
+}
+```
+
+---
+
+## 测试策略
+
+### JSON结构测试
+
+```go
+func TestJSONWriter(t *testing.T) {
+    report := BuildReport("task-1", []VulnResult{
+        {URL: "https://example.com", Plugin: "baseline", Severity: SeverityLow, Title: "Missing Header"},
+    })
+
+    var buf bytes.Buffer
+    err := JSONWriter{Pretty: true}.Write(&buf, report)
+    require.NoError(t, err)
+    assert.Contains(t, buf.String(), `"task_id": "task-1"`)
+}
+```
+
+### HTML转义测试
+
+```go
+func TestHTMLWriterEscapesContent(t *testing.T) {
+    report := BuildReport("task-1", []VulnResult{
+        {
+            URL: "<script>alert(1)</script>",
+            Plugin: "test",
+            Severity: SeverityInfo,
+            Title: "escape test",
+        },
+    })
+
+    writer, _ := NewHTMLWriter()
+    var buf bytes.Buffer
+    require.NoError(t, writer.Write(&buf, report))
+    assert.NotContains(t, buf.String(), "<script>alert(1)</script>")
+    assert.Contains(t, buf.String(), "&lt;script&gt;")
+}
+```
+
+### 去重测试
+
+```go
+func TestCollectorDeduplicate(t *testing.T) {
+    collector := NewCollector()
+    result := VulnResult{
+        URL: "https://example.com/a",
+        Plugin: "sqldet",
+        VulnType: "sqli",
+        Severity: SeverityHigh,
+    }
+
+    assert.True(t, collector.Add(result))
+    assert.False(t, collector.Add(result))
+    assert.Len(t, collector.Results(), 1)
+}
+```
+
+---
+
+## 最容易踩的5个坑
+
+### 坑1：直接拼接HTML
+
+**错误示例**
+```go
+html := "<td>" + result.URL + "</td>"
+```
+
+**正确做法**
+```go
+tmpl.Execute(writer, report)
+```
+
+使用 `html/template` 可以显著降低报告 XSS 风险。
+
+### 坑2：JSON字段不稳定
+
+**错误示例**
+```go
+type Result struct {
+    Msg string `json:"msg"`
+}
+```
+
+**正确做法**
+```go
+type Result struct {
+    Title string `json:"title"`
+    Evidence []Evidence `json:"evidence"`
+}
+```
+
+JSON 是给平台集成使用的，字段命名要清晰且长期稳定。
+
+### 坑3：报告只记录结论不记录证据
+
+**错误示例**
+```json
+{"title":"存在漏洞","severity":"high"}
+```
+
+**正确做法**
+```json
+{
+  "title": "存在漏洞",
+  "severity": "high",
+  "evidence": [{"type": "response_diff", "summary": "响应差异明显"}]
+}
+```
+
+没有证据的报告无法复核，也无法用于整改闭环。
+
+### 坑4：内存中无限累积结果
+
+**错误示例**
+```go
+results = append(results, result)
+```
+
+**正确做法**
+
+```go
+collector.Add(result)
+jsonlWriter.Append(result)
+```
+
+大型任务要考虑增量落盘和最终汇总。
+
+### 坑5：严重等级没有统一标准
+
+**错误示例**
+```go
+Severity: "危险"
+Severity: "high"
+Severity: "严重"
+```
+
+**正确做法**
+```go
+const SeverityHigh Severity = "high"
+```
+
+等级字段必须枚举化，否则排序、筛选和统计都会混乱。
+
+---
+
+## 面试高频考点
+
+### 考点1：如何设计一个支持多格式输出的报告系统？
+
+**回答要点**：
+1. 定义统一的漏洞结果模型
+2. 所有格式从同一份数据渲染
+3. HTML、JSON、TXT 各自只负责呈现
+4. 输出入口统一管理文件写入和错误处理
+5. 测试不同格式的关键字段一致性
+
+### 考点2：HTML报告如何防止XSS？
+
+**回答要点**：
+1. 使用 `html/template` 做上下文转义
+2. 不可信字段进入报告前做限长
+3. 不直接拼接 HTML 字符串
+4. JSON 嵌入 HTML 时注意转义
+5. 报告中的请求响应片段只作为文本展示
+
+### 考点3：报告里的漏洞ID如何生成？
+
+**回答要点**：
+1. 不能用数组下标
+2. 可由目标、URL、插件、漏洞类型、参数等字段计算
+3. ID 用于去重、引用、工单同步
+4. 需要在相同漏洞重复扫描时保持相对稳定
+
+---
+
+## 总结与扩展
+
+### 核心经验总结
+
+1. **报告系统从数据模型开始**
+   - 先结构化漏洞结果
+   - 再考虑输出格式
+   - 不要在格式层补业务字段
+
+2. **多格式输出要复用数据**
+   - HTML 面向人工阅读
+   - JSON 面向平台集成
+   - TXT 面向快速查看
+
+3. **HTML报告必须安全渲染**
+   - 目标响应不可信
+   - 证据内容要转义
+   - 请求响应片段要限长
+
+4. **证据链决定报告质量**
+   - 结论要能复核
+   - 插件、URL、时间、证据都要保留
+   - 误报排查依赖证据
+
+5. **大型任务要支持增量输出**
+   - 避免结果丢失
+   - 控制内存占用
+   - 便于长任务观察进度

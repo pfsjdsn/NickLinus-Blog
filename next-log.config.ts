@@ -19,6 +19,10 @@ const config = {
     primaryColor: "#1ed760",
   },
 
+sitemap: {
+    exclude: ['/resume'], // 从 Sitemap 中排除简历页
+  },
+
   googleVerification: "",
   googleAnalyticsId: "",
 } satisfies SiteConfig;

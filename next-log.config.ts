@@ -22,7 +22,9 @@ const config = {
 sitemap: {
     exclude: ['/resume'], // 从 Sitemap 中排除简历页
   },
-
+navigation: {
+  resume: true,  // 改成 false
+},
   googleVerification: "",
   googleAnalyticsId: "",
 } satisfies SiteConfig;

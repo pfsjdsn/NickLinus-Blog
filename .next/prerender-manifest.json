@@ -1,11 +1,1 @@
-{
-  "version": 4,
-  "routes": {},
-  "dynamicRoutes": {},
-  "notFoundRoutes": [],
-  "preview": {
-    "previewModeId": "8644c49b6676640e1c3f2b2901d8e803",
-    "previewModeSigningKey": "b0bb39f2678896239eb636461f0d33053f087e3fb3b9670898ec88a86d849977",
-    "previewModeEncryptionKey": "a3b62be2ad8ebf82639c8633c56f00f1e20a18438a2d276ced0dd803cf7bd3a9"
-  }
-}
+{"version":4,"routes":{"/post/How-to-mute-a-specific-app-on-Windows10":{},"/post/design-security-report-system":{}},"dynamicRoutes":{"/post/[slug]":{"dataRoute":null,"dataRouteRegex":null,"fallback":null,"fallbackRevalidate":false,"fallbackSourceRoute":"/post/[slug]","routeRegex":"^\\/post\\/([^/]+?)(?:\\/)?$","allowHeader":[]}},"notFoundRoutes":[],"preview":{"previewModeId":"8644c49b6676640e1c3f2b2901d8e803","previewModeSigningKey":"b0bb39f2678896239eb636461f0d33053f087e3fb3b9670898ec88a86d849977","previewModeEncryptionKey":"a3b62be2ad8ebf82639c8633c56f00f1e20a18438a2d276ced0dd803cf7bd3a9"}}

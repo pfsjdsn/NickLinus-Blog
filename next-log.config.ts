@@ -18,9 +18,6 @@ const config = {
   theme: {
     primaryColor: "#1ed760",
   },
-navigation: {
-  resume: true,  // 改成 false
-},
   googleVerification: "",
   googleAnalyticsId: "",
 } satisfies SiteConfig;

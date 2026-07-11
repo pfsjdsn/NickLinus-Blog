@@ -1,0 +1,90 @@
+---
+title: "Vue——$attrs的使用（父组件传值给孙组件）"
+date: 2026-07-11
+description: ""
+author: "NickLinus"
+category: "Vue"
+thumbnail: ""
+published: true
+---
+
+# Vue——$attrs的使用（父组件传值给孙组件）
+
+> 原创 已于 2022-07-10 09:56:27 修改 · 699 阅读 · 1 · 2 · 本内容遵循CC 4.0 BY-SA版权协议 版权声明：本文为博主原创文章，遵循 CC 4.0 BY-SA 版权协议，转载请附上原文出处链接和本声明。
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/118883034
+
+father(父页面）
+
+```
+<template>
+  <div>
+    <son ref="son" :son_name="father_name"></son>
+  </div>
+</template>
+<script>
+import { son } from './components'
+export default ({
+  components: {
+    son
+  },
+  data () {
+    return {
+      father_name: 'jack'
+    }
+  }
+})
+</script>
+```
+
+son(子页面）
+
+```
+<template>
+  <div>
+    <grandson ref="grandson" :grandson_name="$attrs.son_name"></grandson>
+  </div>
+</template>
+<script>
+import { grandson } from './components'
+export default ({
+  components: {
+    grandson
+  },
+  created () {
+    console.log(this.$attrs, 'this.$attrs...');
+  },
+  data () {
+    return {
+
+    }
+  }
+})
+</script>
+```
+
+grandson(孙页面）
+
+```
+
+<template>
+  <div>内容</div>
+</template>
+<script>
+export default ({
+  props: ['grandson_name'],
+  data () {
+    return {
+      grandson_name: ''
+    }
+  },
+  watch: {
+    'grandson_name': {
+      handler (newVal) {
+        console.log(newVal, 'newVal....');
+        this.$set(this, 'grandson_name', this.grandson_name)
+      }
+    }
+  }
+})
+</script>
+```

@@ -1,0 +1,23 @@
+---
+title: "Vue——input输入内容去除空格"
+date: 2026-07-11
+description: ""
+author: "NickLinus"
+category: "Vue"
+thumbnail: ""
+published: true
+---
+
+# Vue——input输入内容去除空格
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/120398796
+
+```
+<input v-model.trim="searchKey" type="text">
+
+data() {
+return {
+searchKey: ''
+}
+}
+```

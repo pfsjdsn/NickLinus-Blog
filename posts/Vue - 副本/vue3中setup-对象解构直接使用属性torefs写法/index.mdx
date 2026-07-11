@@ -1,0 +1,43 @@
+---
+title: "Vue——vue3中setup() 对象解构直接使用属性toRefs写法"
+date: 2026-07-11
+description: ""
+author: "NickLinus"
+category: "Vue"
+thumbnail: ""
+published: true
+---
+
+# Vue——vue3中setup() 对象解构直接使用属性toRefs写法
+
+> 原创 于 2022-10-07 11:10:37 发布 · 1.1k 阅读 · 0 · 0 · 本内容遵循CC 4.0 BY-SA版权协议 版权声明：本文为博主原创文章，遵循 CC 4.0 BY-SA 版权协议，转载请附上原文出处链接和本声明。
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/127192251
+
+
+
+```vue
+<template>
+  <h1>用户年龄：{{ age }}</h1>
+  <h1>用户名称：{{ name }}</h1>
+</template>
+```
+
+```js
+<script>
+import { reactive } from 'vue'
+export default {
+  data () {
+    return {
+    }
+  },
+  methods: {
+  },
+  setup () {
+    const user = reactive({
+      age: '18',
+      name: 'abc'
+    })
+    return {  ...toRefs(user)  }
+  },
+</script>
+```

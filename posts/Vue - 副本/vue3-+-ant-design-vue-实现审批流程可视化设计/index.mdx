@@ -1,0 +1,179 @@
+---
+title: "Vue——Vue3 + Ant Design Vue 实现审批流程可视化设计"
+date: 2026-07-11
+description: ""
+author: "NickLinus"
+category: "Vue"
+thumbnail: ""
+published: true
+---
+
+# Vue——Vue3 + Ant Design Vue 实现审批流程可视化设计
+
+> 原创 于 2025-12-04 16:05:14 发布 · 683 阅读 · 5 · 4 · 本内容遵循CC 4.0 BY-SA版权协议 版权声明：本文为博主原创文章，遵循 CC 4.0 BY-SA 版权协议，转载请附上原文出处链接和本声明。 GEO检测
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/155573627
+
+在现代企业管理软件中，工作流审批是一个核心功能。为了让用户更直观地设计和配置审批流程，我们通常需要提供一个可视化的流程设计器。本文将介绍如何使用 Vue3 和Ant DesignVue 实现一个直观易用的审批流程可视化设计工具。
+
+### 为什么需要可视化审批流程设计？
+
+传统的审批流程配置方式通常是通过复杂的表单或者JSON配置文件，这对于普通用户来说非常不友好。可视化设计可以让用户通过拖拽、点击等方式直观地构建审批流程，大大降低使用门槛。
+
+### 核心组件架构
+
+我们的审批流程设计器主要包括三个区域：
+
+1. **基础信息配置区** ：用于配置模板的基本信息，如模板名称、类型等
+
+2. **流程画布区** ：可视化展示整个审批流程
+
+3. **节点配置区** ：对选中的节点进行详细配置
+
+#### 流程画布设计
+
+流程画布是整个设计器的核心，需要清晰展示各个审批节点及它们之间的连接关系。我们可以使用简单的HTML和 CSS 来构建基本的节点样式：
+
+```vue
+<template>
+  <div class="flow-canvas">
+    <!-- 开始节点 -->
+    <div class="flow-node start-node">
+      <div class="node-content">
+        <div class="node-label">开始</div>
+      </div>
+    </div>
+
+    <!-- 连接线 -->
+    <div class="flow-line"></div>
+
+    <!-- 发起人节点 -->
+    <div class="flow-node initiator-node">
+      <div class="node-content">
+        <div class="node-title">发起结点</div>
+        <div class="node-info">设置发起人角色</div>
+      </div>
+    </div>
+
+    <!-- 连接线 -->
+    <div class="flow-line"></div>
+
+    <!-- 审批节点 -->
+    <div class="flow-node approval-node">
+      <div class="node-content">
+        <div class="node-title">审批节点1</div>
+        <div class="node-info">设置审批人</div>
+      </div>
+    </div>
+
+    <!-- 连接线 -->
+    <div class="flow-line"></div>
+
+    <!-- 结束节点 -->
+    <div class="flow-node end-node">
+      <div class="node-content">
+        <div class="node-label">结束</div>
+      </div>
+    </div>
+  </div>
+</template>
+```
+
+#### 节点交互设计
+
+为了让用户能配置每个节点的具体信息，我们需要实现节点点击交互功能：
+
+```javascript
+// 打开节点配置面板
+function openNodeConfig(nodeId) {
+  currentEditNode.value = nodeId;
+  showNodeConfigPanel.value = true;
+  
+  // 根据节点ID获取节点数据并填充到配置面板
+  const nodeData = getNodeDataById(nodeId);
+  populateConfigPanel(nodeData);
+}
+
+// 保存节点配置
+function saveNodeConfig() {
+  // 验证配置数据
+  if (!validateNodeConfig(currentNodeConfig)) {
+    return;
+  }
+  
+  // 保存配置到对应节点
+  updateNodeConfig(currentEditNode.value, currentNodeConfig);
+  
+  // 关闭配置面板
+  showNodeConfigPanel.value = false;
+}
+```
+
+### 动态节点管理
+
+在实际应用中，审批流程可能包含多个审批节点，我们需要支持动态添加和删除节点：
+
+```javascript
+// 添加审批节点
+function addApprovalNode() {
+  const newNode = {
+    id: generateUniqueId(),
+    name: `节点${additionalNodes.value.length + 2}`,
+    approvers: [],
+    configured: false
+  };
+  additionalNodes.value.push(newNode);
+}
+
+// 移除节点
+function removeNode(nodeId) {
+  const index = additionalNodes.value.findIndex(node => node.id === nodeId);
+  if (index !== -1) {
+    additionalNodes.value.splice(index, 1);
+  }
+}
+```
+
+### 数据结构设计
+
+为了方便管理和保存流程定义，我们需要合理设计数据结构：
+
+```javascript
+const flowDefinition = {
+  nodes: [
+    {
+      nodeId: 'start',
+      nodeName: '发起结点',
+      nodeType: 1, // 发起人节点
+      approvers: [], // 审批人
+      nextNodes: ['approval1'] // 下一个节点
+    },
+    {
+      nodeId: 'approval1',
+      nodeName: '审批节点1',
+      nodeType: 2, // 审批节点
+      approvers: [],
+      nextNodes: ['end'],
+      approvalDays: 3 // 审批天数
+    },
+    {
+      nodeId: 'end',
+      nodeName: '结束',
+      nodeType: 3, // 结束节点
+      approvers: [],
+      nextNodes: []
+    }
+  ]
+};
+```
+
+### 总结
+
+通过上述设计，我们实现了一个基本的审批流程可视化设计器。这种方式的优势包括：
+
+1. **直观性** ：用户可以通过图形化界面直观地了解整个审批流程
+
+2. **易用性** ：通过简单的点击和配置即可完成复杂流程的设计
+
+3. **灵活性** ：支持动态添加和删除节点，满足不同场景的需求
+
+在实际开发中，还可以进一步扩展功能，例如添加条件分支、并行审批等功能，使审批流程设计更加完善。

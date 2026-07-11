@@ -1,0 +1,44 @@
+---
+title: "Vue——vue3中setup() computed 计算属性写法"
+date: 2026-07-11
+description: ""
+author: "NickLinus"
+category: "Vue"
+thumbnail: ""
+published: true
+---
+
+# Vue——vue3中setup() computed 计算属性写法
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/127192290
+
+```vue
+<template>
+// cba
+ <h1>用户名称翻转：{{ reverseName }}</h1>
+</template>
+```
+
+```js
+<script>
+import { toRefs,reactive,computed } from 'vue'
+export default {
+  data () {
+    return {
+    }
+  },
+  methods: {
+  },
+  setup () {
+    const user = reactive({
+      age: '18',
+      name: 'abc',
+      type: '1111',
+      reverseName: computed(() => {
+        return user.name.split('').reverse().join('')
+      })
+    })
+    return {  ...toRefs(user) }
+  },
+</script>
+```

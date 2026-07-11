@@ -1,0 +1,35 @@
+---
+title: "Vue——vue3报错 ＜Suspense＞ slots expect a single root node."
+date: 2026-07-11
+description: ""
+author: "NickLinus"
+category: "Vue"
+thumbnail: ""
+published: true
+---
+
+# Vue——vue3报错 ＜Suspense＞ slots expect a single root node.
+
+> 原创 于 2023-01-06 15:49:49 发布 · 865 阅读 · 0 · 0 · 本内容遵循CC 4.0 BY-SA版权协议 版权声明：本文为博主原创文章，遵循 CC 4.0 BY-SA 版权协议，转载请附上原文出处链接和本声明。
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/128580334
+
+解决：如果有多组件嵌入时需要给每个组件一个 div 标签
+
+```vue
+  <Suspense>
+    <!--  请求成功返回的数据 -->
+    <template #default>
+      <div>
+        <async-show />
+        <dog-show />
+      </div>
+    </template>
+    <!-- 请求失败显示的数据 -->
+    <template #fallback>
+      <div>
+        <h1>Loading !...</h1>
+      </div>
+    </template>
+  </Suspense>
+
+```

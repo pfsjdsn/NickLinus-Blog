@@ -1,0 +1,688 @@
+---
+title: "前端——问卷系统评分题保存草稿报错的解决方案"
+date: 2026-07-11
+description: ""
+author: "NickLinus"
+category: "Vue"
+thumbnail: ""
+published: true
+---
+
+# 前端——问卷系统评分题保存草稿报错的解决方案
+
+> 原创 于 2026-02-10 06:32:25 发布 · 922 阅读 · 15 · 9 · 本内容遵循CC 4.0 BY-SA版权协议 版权声明：本文为博主原创文章，遵循 CC 4.0 BY-SA 版权协议，转载请附上原文出处链接和本声明。 GEO检测
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/157930445
+
+### 问题背景
+
+在开发问卷调查/满意度调查功能时，通常支持多种问题类型：
+
+- 单选题
+
+- 多选题
+
+- 评分题
+
+当用户创建调查问卷，选择 **评分题** 类型后，点击 **保存草稿** 时出现报错。
+
+### 问题复现
+
+**操作步骤：** 
+
+1. 进入满意度调查功能
+
+2. 点击"创建调查"
+
+3. 添加一个问题，类型选择"评分"
+
+4. 填写问题内容
+
+5. 点击"保存草稿"
+
+6. **结果** ：提示报错，保存失败
+
+### 问题分析
+
+通过代码分析，发现问题根源：
+
+#### 1.数据模型不完整
+
+评分题的数据结构只定义了 `maxScore` （最大分值），缺少 `minScore` （最小分值）：
+
+```javascript
+// 错误的数据结构
+{
+  questionContent: "请对服务评分",
+  voteType: 3,  // 3 = 评分题
+  maxScore: 5,
+  // 缺少 minScore 字段！
+}
+```
+
+#### 2. UI 控件缺失
+
+页面模板中只有"最大分值"输入框，没有"最小分值"输入框。
+
+#### 3. 数据提交不完整
+
+提交给后端的数据缺少 `minScore` 字段，导致后端校验失败。
+
+#### 4. 验证逻辑不全
+
+表单验证只检查了 `maxScore` ，没有验证 `minScore` 以及两者的关系。
+
+### 解决方案
+
+#### 方案一：完善数据模型
+
+在表单初始化时添加完整的评分字段：
+
+```javascript
+// 问卷表单数据结构
+const surveyForm = ref({
+  title: '',
+  description: '',
+  questions: [
+    {
+      questionContent: '',
+      questionType: 1, // 1=单选, 2=多选, 3=评分
+      options: [{ optionName: '', hasError: false }],
+      // 评分题专用字段
+      maxScore: 5,           // 最大分值
+      minScore: 1,           // 最小分值（新增）
+      maxScoreError: false,
+      maxScoreErrorText: '',
+      minScoreError: false,  // 新增
+      minScoreErrorText: '', // 新增
+      questionError: false,
+    },
+  ],
+});
+```
+
+#### 方案二：添加最小分值 UI 控件
+
+```vue
+<template>
+  <view class="question-item" v-for="(question, index) in surveyForm.questions" :key="index">
+    <!-- 问题内容 -->
+    <view class="form-item">
+      <text class="label">问题内容</text>
+      <input
+        v-model="question.questionContent"
+        placeholder="请输入问题内容"
+        :class="{ 'input-error': question.questionError }"
+      />
+    </view>
+
+    <!-- 问题类型选择 -->
+    <view class="form-item">
+      <text class="label">问题类型</text>
+      <view class="type-selector">
+        <view
+          v-for="type in questionTypes"
+          :key="type.value"
+          :class="['type-option', { active: question.questionType === type.value }]"
+          @click="setQuestionType(index, type.value)"
+        >
+          {{ type.label }}
+        </view>
+      </view>
+    </view>
+
+    <!-- 单选/多选的选项列表 -->
+    <view v-if="question.questionType !== 3" class="options-list">
+      <view
+        v-for="(option, optIndex) in question.options"
+        :key="optIndex"
+        class="option-item"
+      >
+        <input
+          v-model="option.optionName"
+          placeholder="请输入选项内容"
+          :class="{ 'input-error': option.hasError }"
+        />
+        <button @click="removeOption(index, optIndex)">删除</button>
+      </view>
+      <button @click="addOption(index)">添加选项</button>
+    </view>
+
+    <!-- 评分题配置 -->
+    <view v-if="question.questionType === 3" class="score-config">
+      <!-- 最大分值 -->
+      <view class="score-item">
+        <text class="label">最大分值：</text>
+        <input
+          type="number"
+          v-model.number="question.maxScore"
+          :class="{ 'input-error': question.maxScoreError }"
+          placeholder="请输入最大分值(1-10)"
+          @blur="handleMaxScoreChange($event, index)"
+          @input="clearMaxScoreError(index)"
+        />
+        <text v-if="question.maxScoreError" class="error-text">
+          {{ question.maxScoreErrorText }}
+        </text>
+      </view>
+
+      <!-- 最小分值（新增） -->
+      <view class="score-item">
+        <text class="label">最小分值：</text>
+        <input
+          type="number"
+          v-model.number="question.minScore"
+          :class="{ 'input-error': question.minScoreError }"
+          placeholder="请输入最小分值(1-10)"
+          @blur="handleMinScoreChange($event, index)"
+          @input="clearMinScoreError(index)"
+        />
+        <text v-if="question.minScoreError" class="error-text">
+          {{ question.minScoreErrorText }}
+        </text>
+      </view>
+
+      <!-- 评分预览 -->
+      <view class="score-preview">
+        <text>评分范围预览：{{ question.minScore }} - {{ question.maxScore }} 分</text>
+      </view>
+    </view>
+  </view>
+</template>
+
+<script setup>
+import { ref } from 'vue';
+
+const questionTypes = [
+  { label: '单选', value: 1 },
+  { label: '多选', value: 2 },
+  { label: '评分', value: 3 },
+];
+
+const surveyForm = ref({
+  title: '',
+  description: '',
+  questions: [createEmptyQuestion()],
+});
+
+// 创建空问题
+function createEmptyQuestion() {
+  return {
+    questionContent: '',
+    questionType: 1,
+    options: [{ optionName: '', hasError: false }],
+    maxScore: 5,
+    minScore: 1,
+    maxScoreError: false,
+    maxScoreErrorText: '',
+    minScoreError: false,
+    minScoreErrorText: '',
+    questionError: false,
+  };
+}
+
+// 设置问题类型
+const setQuestionType = (questionIndex, type) => {
+  const question = surveyForm.value.questions[questionIndex];
+  question.questionType = type;
+
+  if (type === 3) {
+    // 评分题：设置默认分值，清空选项
+    question.maxScore = 5;
+    question.minScore = 1;
+    question.maxScoreError = false;
+    question.maxScoreErrorText = '';
+    question.minScoreError = false;
+    question.minScoreErrorText = '';
+    question.options = [];
+  } else {
+    // 非评分题：确保有选项
+    if (!question.options.length) {
+      question.options = [{ optionName: '', hasError: false }];
+    }
+  }
+};
+
+// 清除最大分值错误
+const clearMaxScoreError = (questionIndex) => {
+  const question = surveyForm.value.questions[questionIndex];
+  question.maxScoreError = false;
+  question.maxScoreErrorText = '';
+};
+
+// 清除最小分值错误
+const clearMinScoreError = (questionIndex) => {
+  const question = surveyForm.value.questions[questionIndex];
+  question.minScoreError = false;
+  question.minScoreErrorText = '';
+};
+
+// 处理最大分值变化
+const handleMaxScoreChange = (event, questionIndex) => {
+  const question = surveyForm.value.questions[questionIndex];
+  const value = parseInt(event.detail?.value || event.target?.value, 10);
+
+  // 清除错误状态
+  question.maxScoreError = false;
+  question.maxScoreErrorText = '';
+
+  // 验证
+  if (isNaN(value) || value < 1) {
+    question.maxScoreError = true;
+    question.maxScoreErrorText = '请输入大于0的整数';
+    return;
+  }
+
+  if (value > 10) {
+    question.maxScoreError = true;
+    question.maxScoreErrorText = '最大值不能超过10';
+    question.maxScore = 10;
+    return;
+  }
+
+  // 验证最大值必须大于最小值
+  if (question.minScore && value <= question.minScore) {
+    question.maxScoreError = true;
+    question.maxScoreErrorText = '最大分值必须大于最小分值';
+    return;
+  }
+
+  question.maxScore = value;
+};
+
+// 处理最小分值变化
+const handleMinScoreChange = (event, questionIndex) => {
+  const question = surveyForm.value.questions[questionIndex];
+  const value = parseInt(event.detail?.value || event.target?.value, 10);
+
+  // 清除错误状态
+  question.minScoreError = false;
+  question.minScoreErrorText = '';
+
+  // 验证
+  if (isNaN(value) || value < 1) {
+    question.minScoreError = true;
+    question.minScoreErrorText = '请输入大于0的整数';
+    return;
+  }
+
+  if (value > 10) {
+    question.minScoreError = true;
+    question.minScoreErrorText = '最大值不能超过10';
+    question.minScore = 10;
+    return;
+  }
+
+  // 验证最小值必须小于最大值
+  if (question.maxScore && value >= question.maxScore) {
+    question.minScoreError = true;
+    question.minScoreErrorText = '最小分值必须小于最大分值';
+    return;
+  }
+
+  question.minScore = value;
+};
+</script>
+```
+
+#### 方案三：完善表单验证逻辑
+
+```javascript
+// 表单验证函数
+const validateForm = () => {
+  const errors = [];
+  let firstErrorField = null;
+
+  // 验证标题
+  if (!surveyForm.value.title.trim()) {
+    errors.push('title');
+    if (!firstErrorField) firstErrorField = 'title';
+  }
+
+  // 验证每个问题
+  surveyForm.value.questions.forEach((question, index) => {
+    // 验证问题内容
+    if (!question.questionContent.trim()) {
+      question.questionError = true;
+      errors.push(`question_${index}_content`);
+      if (!firstErrorField) firstErrorField = `question_${index}_content`;
+    } else {
+      question.questionError = false;
+    }
+
+    // 根据问题类型验证
+    if (question.questionType === 3) {
+      // 评分题验证
+      validateScoreQuestion(question, index, errors, firstErrorField);
+    } else {
+      // 选择题验证
+      validateOptionsQuestion(question, index, errors, firstErrorField);
+    }
+  });
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+    firstErrorField,
+  };
+};
+
+// 验证评分题
+const validateScoreQuestion = (question, index, errors, firstErrorField) => {
+  // 验证最大分值
+  if (
+    question.maxScore === undefined ||
+    question.maxScore === null ||
+    question.maxScore === '' ||
+    question.maxScore < 1 ||
+    question.maxScore > 10
+  ) {
+    question.maxScoreError = true;
+    question.maxScoreErrorText = '请输入1-10的整数';
+    errors.push(`question_${index}_maxScore`);
+    if (!firstErrorField) firstErrorField = `question_${index}_maxScore`;
+  } else {
+    question.maxScoreError = false;
+    question.maxScoreErrorText = '';
+  }
+
+  // 验证最小分值
+  if (
+    question.minScore === undefined ||
+    question.minScore === null ||
+    question.minScore === '' ||
+    question.minScore < 1 ||
+    question.minScore > 10
+  ) {
+    question.minScoreError = true;
+    question.minScoreErrorText = '请输入1-10的整数';
+    errors.push(`question_${index}_minScore`);
+    if (!firstErrorField) firstErrorField = `question_${index}_minScore`;
+  } else {
+    question.minScoreError = false;
+    question.minScoreErrorText = '';
+  }
+
+  // 验证分值范围关系
+  if (
+    !question.maxScoreError &&
+    !question.minScoreError &&
+    question.maxScore <= question.minScore
+  ) {
+    question.maxScoreError = true;
+    question.maxScoreErrorText = '最大分值必须大于最小分值';
+    errors.push(`question_${index}_scoreRange`);
+    if (!firstErrorField) firstErrorField = `question_${index}_maxScore`;
+  }
+};
+
+// 验证选择题
+const validateOptionsQuestion = (question, index, errors, firstErrorField) => {
+  if (!question.options || question.options.length < 2) {
+    errors.push(`question_${index}_options`);
+    if (!firstErrorField) firstErrorField = `question_${index}_options`;
+    return;
+  }
+
+  question.options.forEach((option, optIndex) => {
+    if (!option.optionName.trim()) {
+      option.hasError = true;
+      errors.push(`question_${index}_option_${optIndex}`);
+      if (!firstErrorField) firstErrorField = `question_${index}_option_${optIndex}`;
+    } else {
+      option.hasError = false;
+    }
+  });
+};
+```
+
+#### 方案四：完善数据提交逻辑
+
+```javascript
+// 收集表单数据
+const collectFormData = () => {
+  return {
+    title: surveyForm.value.title,
+    description: surveyForm.value.description,
+    questions: surveyForm.value.questions.map((question) => ({
+      questionContent: question.questionContent,
+      questionType: question.questionType,
+      // 选择题提交选项
+      options:
+        question.questionType !== 3
+          ? question.options.map((opt) => ({ optionName: opt.optionName }))
+          : [],
+      // 评分题提交分值范围（关键修复点）
+      maxScore: question.questionType === 3 ? question.maxScore : undefined,
+      minScore: question.questionType === 3 ? question.minScore : undefined,
+    })),
+  };
+};
+
+// 保存草稿
+const saveDraft = async () => {
+  try {
+    // 验证表单
+    const { isValid, firstErrorField } = validateForm();
+    if (!isValid) {
+      showToast('请完善表单信息');
+      // 滚动到第一个错误字段
+      scrollToError(firstErrorField);
+      return;
+    }
+
+    showLoading('保存中...');
+
+    // 收集数据
+    const formData = collectFormData();
+
+    // 调用保存草稿接口
+    const result = await saveSurveyDraft({
+      ...formData,
+      isDraft: true,
+    });
+
+    hideLoading();
+
+    if (result.success) {
+      showToast('草稿保存成功');
+      // 可选：返回列表页
+      // navigateBack();
+    } else {
+      showToast(result.message || '保存失败');
+    }
+  } catch (error) {
+    hideLoading();
+    console.error('保存草稿失败:', error);
+    showToast('保存失败，请重试');
+  }
+};
+
+// 提交调查
+const submitSurvey = async () => {
+  try {
+    const { isValid, firstErrorField } = validateForm();
+    if (!isValid) {
+      showToast('请完善表单信息');
+      scrollToError(firstErrorField);
+      return;
+    }
+
+    showLoading('提交中...');
+
+    const formData = collectFormData();
+
+    const result = await createSurvey({
+      ...formData,
+      isDraft: false,
+    });
+
+    hideLoading();
+
+    if (result.success) {
+      showToast('创建成功');
+      navigateBack();
+    } else {
+      showToast(result.message || '创建失败');
+    }
+  } catch (error) {
+    hideLoading();
+    showToast('提交失败，请重试');
+  }
+};
+```
+
+#### 方案五：加载草稿时的数据处理
+
+```javascript
+// 加载草稿数据
+const loadDraftData = async (draftId) => {
+  try {
+    showLoading('加载中...');
+
+    const response = await getSurveyDetail({ id: draftId });
+
+    hideLoading();
+
+    if (response.success && response.data) {
+      const data = response.data;
+
+      // 填充表单数据
+      surveyForm.value.title = data.title || '';
+      surveyForm.value.description = data.description || '';
+
+      // 处理问题列表，确保字段完整
+      surveyForm.value.questions = (data.questions || []).map((question) => ({
+        questionContent: question.questionContent || '',
+        questionType: question.questionType || 1,
+        options: (question.options || []).map((opt) => ({
+          optionName: opt.optionName || '',
+          hasError: false,
+        })),
+        // 关键：确保评分题有默认的最大/最小分值
+        maxScore: question.maxScore ?? (question.questionType === 3 ? 5 : undefined),
+        minScore: question.minScore ?? (question.questionType === 3 ? 1 : undefined),
+        maxScoreError: false,
+        maxScoreErrorText: '',
+        minScoreError: false,
+        minScoreErrorText: '',
+        questionError: false,
+      }));
+
+      // 如果没有问题，添加一个默认问题
+      if (surveyForm.value.questions.length === 0) {
+        surveyForm.value.questions.push(createEmptyQuestion());
+      }
+    }
+  } catch (error) {
+    hideLoading();
+    showToast('加载失败');
+  }
+};
+```
+
+### 完整数据结构对比
+
+#### 修复前（不完整）
+
+```javascript
+// 评分题数据 - 缺少 minScore
+{
+  questionContent: "请对服务评分",
+  questionType: 3,
+  options: [],
+  maxScore: 5
+  // minScore 字段缺失，导致后端校验失败
+}
+```
+
+#### 修复后（完整）
+
+```javascript
+// 评分题数据 - 包含完整的分值范围
+{
+  questionContent: "请对服务评分",
+  questionType: 3,
+  options: [],
+  maxScore: 5,
+  minScore: 1  // 新增：最小分值
+}
+```
+
+### 最佳实践总结
+
+#### 1. 数据模型设计要完整
+
+设计数据结构时，考虑所有必要字段：
+
+- 评分题需要 `minScore` 和 `maxScore`
+
+- 为字段设置合理的默认值
+
+#### 2. UI 与数据模型保持一致
+
+数据模型有的字段，UI 也要有对应的控件让用户填写。
+
+#### 3. 验证逻辑要全面
+
+- 验证单个字段的有效性
+
+- 验证字段之间的关系（如 maxScore > minScore）
+
+- 提供友好的错误提示
+
+#### 4. 数据提交前再次检查
+
+在 `collectFormData` 时确保所有必要字段都被正确收集。
+
+#### 5. 加载数据时设置默认值
+
+从后端加载数据时，使用 `??` 或 `||` 为可能缺失的字段设置默认值。
+
+```javascript
+// 使用 nullish coalescing 设置默认值
+maxScore: data.maxScore ?? 5,
+minScore: data.minScore ?? 1,
+```
+
+### 常见问题类型数据结构参考
+
+```typescript
+// TypeScript 类型定义
+interface Question {
+  questionContent: string;
+  questionType: 1 | 2 | 3; // 1=单选, 2=多选, 3=评分
+
+  // 选择题字段
+  options?: Array<{
+    optionName: string;
+    hasError?: boolean;
+  }>;
+
+  // 评分题字段
+  maxScore?: number;
+  minScore?: number;
+
+  // 错误状态
+  questionError?: boolean;
+  maxScoreError?: boolean;
+  maxScoreErrorText?: string;
+  minScoreError?: boolean;
+  minScoreErrorText?: string;
+}
+
+interface Survey {
+  id?: string;
+  title: string;
+  description: string;
+  questions: Question[];
+  isDraft: boolean;
+  createTime?: string;
+  updateTime?: string;
+}
+```
+
+---
+
+**关键词** ：问卷调查、评分题、数据模型、表单验证、草稿保存
+
+**适用场景** ：满意度调查、问卷系统、投票功能、评价系统等需要评分类型问题的业务场景

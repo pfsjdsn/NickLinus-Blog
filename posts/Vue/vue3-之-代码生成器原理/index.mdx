@@ -1,0 +1,415 @@
+---
+title: "Vue——vue3 之 代码生成器原理"
+date: 2026-07-11
+description: ""
+author: "NickLinus"
+category: "Vue"
+thumbnail: ""
+published: true
+---
+
+# Vue——vue3 之 代码生成器原理
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/157541112
+
+**背景问题：** 
+需要理解代码生成器的实现原理。
+
+**方案思考：** 
+实现一个简单的代码生成器。
+
+**具体实现：** 
+代码生成器：
+
+```javascript
+// utils/code-generator.js
+// 代码生成器类
+export class CodeGenerator {
+  constructor(options = {}) {
+    this.options = {
+      templateDir: options.templateDir || './templates',
+      outputDir: options.outputDir || './output',
+      ...options
+    }
+  }
+  
+  // 生成Vue组件
+  static generateVueComponent(config) {
+    const { name, props, template, script, style } = config
+    
+    return `
+<template>
+  <div class="${toKebabCase(name)}">
+    ${template || ''}
+  </div>
+</template>
+
+<script setup>
+${script || 'import { ref } from \'vue\''}
+
+${props ? `defineProps({\n  ${props.map(prop => `${prop.name}: ${prop.type}`).join(',\n  ')}\n})` : ''}
+</script>
+
+<style scoped>
+${style || `.${toKebabCase(name)} {\n  /* 样式 */\n}`}
+</style>`
+  }
+  
+  // 生成API文件
+  static generateApiFile(config) {
+    const { moduleName, baseUrl, methods } = config
+    
+    const apiMethods = methods.map(method => {
+      const { name, url, method: httpMethod, params } = method
+      return `export function ${name}(${params ? 'params' : ''}) {
+  return request({
+    url: '${url}',
+    method: '${httpMethod.toLowerCase()}',
+    ${params ? `${httpMethod.toLowerCase() === 'get' ? 'params' : 'data'}: params` : ''}
+  })
+}`
+    }).join('\n\n')
+    
+    return `import request from '@/utils/request'
+
+${apiMethods}`
+  }
+  
+  // 生成Store
+  static generateStore(config) {
+    const { name, state, actions, getters } = config
+    
+    return `import { defineStore } from 'pinia'
+import { ref, computed } from 'vue'
+
+export const use${capitalize(name)}Store = defineStore('${name}', () => {
+  // State
+  ${Object.entries(state).map(([key, value]) => 
+    `const ${key} = ref(${JSON.stringify(value)})`
+  ).join('\n  ')}
+
+  // Getters
+  ${getters ? Object.entries(getters).map(([key, fn]) => 
+    `const ${key} = computed(() => ${fn})`
+  ).join('\n  ') : ''}
+
+  // Actions
+  ${actions ? Object.entries(actions).map(([key, fn]) => 
+    `const ${key} = ${fn.toString()}`
+  ).join('\n  ') : ''}
+
+  return {
+    ${[...Object.keys(state), ...Object.keys(getters || {}), ...Object.keys(actions || {})].join(',\n    ')}
+  }
+})`
+  }
+  
+  // 生成路由
+  static generateRoute(config) {
+    const { path, name, component, meta } = config
+    
+    return `{
+  path: '${path}',
+  name: '${name}',
+  component: () => import('@/views/${component}.vue'),
+  meta: ${JSON.stringify(meta, null, 2)}
+}`
+  }
+}
+
+// 辅助函数
+function toKebabCase(str) {
+  return str.replace(/[A-Z]/g, match => `-${match.toLowerCase()}`)
+}
+
+function capitalize(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1)
+}
+```
+
+代码生成工具：
+
+```javascript
+// utils/generator-tools.js
+import { CodeGenerator } from './code-generator'
+
+// 项目生成器
+export class ProjectGenerator {
+  // 生成CRUD页面
+  static generateCRUD(config) {
+    const { moduleName, fields, hasPagination = true } = config
+    
+    // 生成列表页面
+    const listPage = this.generateListPage(config)
+    
+    // 生成表单页面
+    const formPage = this.generateFormPage(config)
+    
+    // 生成API
+    const apiFile = CodeGenerator.generateApiFile({
+      moduleName,
+      baseUrl: `/api/${moduleName}`,
+      methods: [
+        { name: `${moduleName}List`, url: `/${moduleName}/list`, method: 'GET', params: true },
+        { name: `get${capitalize(moduleName)}Info`, url: `/${moduleName}/info`, method: 'GET', params: true },
+        { name: `create${capitalize(moduleName)}`, url: `/${moduleName}`, method: 'POST', params: true },
+        { name: `update${capitalize(moduleName)}`, url: `/${moduleName}`, method: 'PUT', params: true },
+        { name: `delete${capitalize(moduleName)}`, url: `/${moduleName}`, method: 'DELETE', params: true }
+      ]
+    })
+    
+    // 生成Store
+    const store = CodeGenerator.generateStore({
+      name: moduleName,
+      state: {
+        list: [],
+        total: 0,
+        loading: false
+      },
+      actions: {
+        getList: `async function(params) {
+  this.loading = true
+  try {
+    const response = await ${moduleName}List(params)
+    this.list = response.data.list
+    this.total = response.data.total
+  } finally {
+    this.loading = false
+  }
+}`
+      }
+    })
+    
+    return {
+      listPage,
+      formPage,
+      apiFile,
+      store
+    }
+  }
+  
+  // 生成列表页面
+  static generateListPage(config) {
+    const { moduleName, fields } = config
+    
+    const tableColumns = fields.map(field => 
+      `<el-table-column prop="${field.name}" label="${field.label}" />`
+    ).join('\n        ')
+    
+    return `<template>
+  <div class="${toKebabCase(moduleName)}-list">
+    <div class="search-form">
+      <el-form :model="queryParams" inline>
+        ${fields.filter(f => f.searchable).map(field => 
+          `<el-form-item label="${field.label}">
+          <el-input 
+            v-model="queryParams.${field.name}" 
+            placeholder="请输入${field.label}" 
+          />
+        </el-form-item>`
+        ).join('\n        ')}
+        <el-form-item>
+          <el-button type="primary" @click="handleSearch">搜索</el-button>
+          <el-button @click="handleReset">重置</el-button>
+        </el-form-item>
+      </el-form>
+    </div>
+    
+    <div class="table-actions">
+      <el-button type="primary" @click="handleAdd">新增</el-button>
+      <el-button @click="handleDeleteBatch">批量删除</el-button>
+    </div>
+    
+    <el-table 
+      :data="list" 
+      v-loading="loading"
+      @selection-change="handleSelectionChange"
+    >
+      <el-table-column type="selection" width="55" />
+      ${tableColumns}
+      <el-table-column label="操作" width="200">
+        <template #default="{ row }">
+          <el-button size="small" @click="handleEdit(row)">编辑</el-button>
+          <el-button size="small" type="danger" @click="handleDelete(row.id)">删除</el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+    
+    <Pagination
+      v-model:page="queryParams.pageNum"
+      v-model:limit="queryParams.pageSize"
+      :total="total"
+      @pagination="getList"
+    />
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted } from 'vue'
+import { ${moduleName}List, delete${capitalize(moduleName)} } from '@/api/${moduleName}'
+import Pagination from '@/components/Pagination.vue'
+
+const list = ref([])
+const total = ref(0)
+const loading = ref(false)
+const queryParams = ref({
+  pageNum: 1,
+  pageSize: 10,
+  ${fields.filter(f => f.searchable).map(f => `${f.name}: ''`).join(',\n  ')}
+})
+
+const selectedRows = ref([])
+
+const getList = async () => {
+  loading.value = true
+  try {
+    const response = await ${moduleName}List(queryParams.value)
+    list.value = response.data.list
+    total.value = response.data.total
+  } finally {
+    loading.value = false
+  }
+}
+
+const handleSearch = () => {
+  queryParams.value.pageNum = 1
+  getList()
+}
+
+const handleReset = () => {
+  queryParams.value = {
+    pageNum: 1,
+    pageSize: 10,
+    ${fields.filter(f => f.searchable).map(f => `${f.name}: ''`).join(',\n    ')}
+  }
+  getList()
+}
+
+const handleAdd = () => {
+  // 跳转到新增页面
+}
+
+const handleEdit = (row) => {
+  // 跳转到编辑页面
+}
+
+const handleDelete = async (id) => {
+  try {
+    await delete${capitalize(moduleName)}(id)
+    ElMessage.success('删除成功')
+    getList()
+  } catch (error) {
+    ElMessage.error('删除失败')
+  }
+}
+
+const handleSelectionChange = (selection) => {
+  selectedRows.value = selection
+}
+
+onMounted(() => {
+  getList()
+})
+</script>`
+  }
+  
+  // 生成表单页面
+  static generateFormPage(config) {
+    const { moduleName, fields } = config
+    
+    const formItems = fields.filter(f => f.formField).map(field => 
+      `<el-form-item label="${field.label}" prop="${field.name}">
+        <el-input 
+          v-model="formData.${field.name}" 
+          placeholder="请输入${field.label}" 
+        />
+      </el-form-item>`
+    ).join('\n        ')
+    
+    return `<template>
+  <div class="${toKebabCase(moduleName)}-form">
+    <el-card>
+      <template #header>
+        <span>${config.title || capitalize(moduleName)}表单</span>
+      </template>
+      
+      <el-form 
+        :model="formData" 
+        :rules="formRules"
+        ref="formRef"
+        label-width="100px"
+      >
+        ${formItems}
+        
+        <el-form-item>
+          <el-button type="primary" @click="handleSubmit">提交</el-button>
+          <el-button @click="handleCancel">取消</el-button>
+        </el-form-item>
+      </el-form>
+    </el-card>
+  </div>
+</template>
+
+<script setup>
+import { ref, reactive } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { get${capitalize(moduleName)}Info, create${capitalize(moduleName)}, update${capitalize(moduleName)} } from '@/api/${moduleName}'
+
+const route = useRoute()
+const router = useRouter()
+const formRef = ref()
+
+const formData = reactive({
+  ${fields.filter(f => f.formField).map(f => `${f.name}: ${f.type === 'number' ? 0 : f.type === 'boolean' ? false : "''"}`).join(',\n  ')}
+})
+
+const formRules = {
+  ${fields.filter(f => f.required).map(f => 
+    `${f.name}: [{ required: true, message: '请输入${f.label}', trigger: 'blur' }]`
+  ).join(',\n  ')}
+}
+
+const handleSubmit = async () => {
+  try {
+    await formRef.value.validate()
+    
+    if (formData.id) {
+      // 更新
+      await update${capitalize(moduleName)}(formData)
+      ElMessage.success('更新成功')
+    } else {
+      // 创建
+      await create${capitalize(moduleName)}(formData)
+      ElMessage.success('创建成功')
+    }
+    
+    router.back()
+  } catch (error) {
+    ElMessage.error('提交失败')
+  }
+}
+
+const handleCancel = () => {
+  router.back()
+}
+
+// 如果是编辑模式，加载数据
+if (route.query.id) {
+  const loadDetail = async () => {
+    const response = await get${capitalize(moduleName)}Info({ id: route.query.id })
+    Object.assign(formData, response.data)
+  }
+  loadDetail()
+}
+</script>`
+  }
+}
+
+function toKebabCase(str) {
+  return str.replace(/[A-Z]/g, match => `-${match.toLowerCase()}`)
+}
+
+function capitalize(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1)
+}
+```

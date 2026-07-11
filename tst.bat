@@ -1,0 +1,9 @@
+mkdir posts\Vue
+mkdir posts\微信小程序
+mkdir posts\JavaScript
+mkdir posts\TypeScript
+mkdir posts\实用网站
+mkdir posts\星辰大海
+mkdir posts\Node
+mkdir posts\Git
+mkdir posts\ElementUI

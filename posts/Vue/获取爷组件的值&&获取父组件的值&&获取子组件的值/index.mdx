@@ -1,0 +1,112 @@
+---
+title: "Vue——获取爷组件的值&&获取父组件的值&&获取子组件的值"
+date: 2026-07-11
+description: ""
+author: "NickLinus"
+category: "Vue"
+thumbnail: ""
+published: true
+---
+
+# Vue——获取爷组件的值&&获取父组件的值&&获取子组件的值
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/118883155
+
+```
+this.$parent.$parent.fater_name
+this.$parent.name
+this.$refs.son.son_name
+```
+
+**father（父页面）** 
+
+```
+<template>
+  <div>
+    <button @click="myClick">改变子组件的值</button>
+    <son ref="son"></son>
+  </div>
+</template>
+
+<script>
+import { son } from './components'
+export default {
+  components: {
+    son
+  },
+  data () {
+    return {
+      father_name: 'fater'
+    }
+  },
+  methods: {
+    myClick () {
+      this.$refs.son.son_name = 'abc'
+    }
+  }
+}
+</script>
+```
+
+**son（子页面）** 
+
+```
+
+<template>
+  <div>
+    <div>名字：{{son_name}}</div>
+    <button @click="doClick">获取父组件的值</button>
+    <grandson ref="grandson"></grandson>
+  </div>
+</template>
+
+<script>
+import { grandson } from './components'
+export default {
+  components: {
+    grandson
+  },
+  data () {
+    return {
+      son_name: 'son_name'
+    }
+  },
+  methods: {
+    doClick () {
+      console.log(this.$parent.father_name);
+    }
+  }
+}
+</script>
+```
+
+**grandson（孙页面）** 
+
+```
+
+<template>
+  <div>
+    <button @click="myClick">获取爷组件的值</button>
+    <son ref="son"></son>
+  </div>
+</template>
+
+<script>
+import { son } from './components'
+export default {
+  components: {
+    son
+  },
+  data () {
+    return {
+      father_name: 'fater'
+    }
+  },
+  methods: {
+    myClick () {
+      console.log(this.$parent.$parent.father_name);// 获取获取爷组件中的值
+    }
+  }
+}
+</script>
+```

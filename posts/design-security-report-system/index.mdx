@@ -27,7 +27,7 @@ published: true
 
 对 xray 这类工具来说，报告输出至少要满足三类人：
 
-```md
+```text
 安全工程师
 ├── 需要漏洞详情
 ├── 需要请求响应证据
@@ -102,7 +102,7 @@ HTML报告最适合人工阅读，但也最容易出问题。
 
 常见输出格式：
 
-```md
+```text
 HTML
 ├── 面向人阅读
 ├── 需要排序、筛选、样式
@@ -144,7 +144,7 @@ TXT
 
 ### 架构设计
 
-```md
+```text
 ┌───────────────────────────────┐
 │        Detection Engine        │
 └───────────────┬───────────────┘
@@ -438,7 +438,7 @@ func severityClass(s Severity) string {
 ```
 
 **pkg/report/template.go**
-```go
+```html
 package report
 
 const reportTemplate = `<!doctype html>
@@ -598,7 +598,7 @@ func TestJSONWriter(t *testing.T) {
 
 ### HTML转义测试
 
-```go
+```vue
 func TestHTMLWriterEscapesContent(t *testing.T) {
     report := BuildReport("task-1", []VulnResult{
         {
@@ -642,12 +642,12 @@ func TestCollectorDeduplicate(t *testing.T) {
 ### 坑1：直接拼接HTML
 
 **错误示例**
-```go
+```html
 html := "<td>" + result.URL + "</td>"
 ```
 
 **正确做法**
-```go
+```bash
 tmpl.Execute(writer, report)
 ```
 
@@ -699,7 +699,7 @@ results = append(results, result)
 
 **正确做法**
 
-```go
+```bash
 collector.Add(result)
 jsonlWriter.Append(result)
 ```
@@ -709,14 +709,14 @@ jsonlWriter.Append(result)
 ### 坑5：严重等级没有统一标准
 
 **错误示例**
-```go
+```text
 Severity: "危险"
 Severity: "high"
 Severity: "严重"
 ```
 
 **正确做法**
-```go
+```javascript
 const SeverityHigh Severity = "high"
 ```
 

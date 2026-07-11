@@ -1,0 +1,944 @@
+---
+title: "前端——文件上传同名冲突检测的实现方案"
+date: 2026-07-11
+description: ""
+author: "NickLinus"
+category: "Vue"
+thumbnail: ""
+published: true
+---
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/157930444
+
+> 在档案管理系统中，用户在同一目录下上传同名文件时，系统没有任何提示，新文件被静默忽略。本文记录这个 **文件重复校验** 问题的前后端协同解决方案。
+
+### 一、问题背景
+
+#### 1.1 问题现象
+
+| 操作步骤 | 预期结果 | 实际结果 |
+|:---:|:---:|:---:|
+| 1. 选择三级目录"规章制度" | - | - |
+| 2. 上传文件 `合同.pdf` | 上传成功 | 上传成功 |
+| 3. 再次选择同一目录 | - | - |
+| 4. 上传另一个 `合同.pdf` | 提示"已存在同个名称的文件" | **无任何提示，新文件被忽略** |
+
+**用户困惑** ：明明上传了新文件，但列表里只有第一次上传的内容。
+
+#### 1.2 问题影响
+
+- 用户误以为上传成功，实际新文件丢失
+
+- 无法通过上传覆盖更新文件
+
+- 用户体验差，容易造成数据丢失
+
+#### 1.3 修复历程
+
+| 时间 | 操作 | 结果 |
+|:---:|:---:|:---:|
+| 12-11 | 创建问题 | - |
+| 12-11 | AI分析并修复 | 提交前端+后端代码 |
+| 12-12 | 合并代码 | 验证通过 |
+| 12-25 | 验收关闭 | 功能正常 |
+
+**激活次数** ：0次（一次修复成功）
+
+### 二、问题分析
+
+#### 2.1 业务场景
+
+档案管理采用三级目录结构：
+
+```text
+项目文档
+├── 规章制度
+│   ├── 运营管理
+│   │   ├── 合同.pdf      ← 已存在
+│   │   └── 规定.docx
+│   └── 用户协议
+│       └── 协议.pdf
+└── 会议记录
+    └── ...
+```
+
+用户上传文件时需要：
+
+1. 选择目标分类（三级目录）
+
+2. 输入文件名称
+
+3. 上传文件
+
+#### 2.2 问题根因
+
+##### 问题1：前端去重逻辑缺陷
+
+**原有代码** ：
+
+```javascript
+// 提交时的去重逻辑
+const submit = async () => {
+  const allFiles = [...categoryFiles, ...processedFiles]
+
+  // 问题：按 fileName 去重，但 fileName 可能不含扩展名
+  const uniqueFiles = []
+  const fileNameSet = new Set()
+
+  for (const file of allFiles) {
+    const name = file.fileName || ''  // 可能是 "合同" 而非 "合同.pdf"
+    if (name && !fileNameSet.has(name)) {
+      fileNameSet.add(name)
+      uniqueFiles.push(file)
+    }
+  }
+
+  // 问题：重复文件被静默过滤，没有任何提示！
+}
+```
+
+**问题分析** ：
+
+1. `fileName` 字段可能不含扩展名，导致 `合同.pdf` 和 `合同.docx` 被视为同名
+
+2. 去重时直接过滤，没有给用户任何反馈
+
+3. 用户以为上传成功，实际新文件被忽略
+
+##### 问题2：后端校验缺失
+
+**原有代码** ：
+
+```java
+public ResponseDTO<String> update(CommunityArchiveUpdateDTO dto) {
+    // 问题：只检查 dto.getFileName()，但这个字段通常为空
+    // 实际的文件名在 files 数组的每个对象中
+    if (StringUtils.isNotBlank(dto.getFileName())) {
+        // 这个分支几乎不会进入
+        checkDuplicate(dto.getFileName());
+    }
+
+    // 直接保存，没有校验 files 中的重复文件
+    archiveMapper.update(dto);
+    return ResponseDTO.ok();
+}
+```
+
+**问题分析** ：
+
+1. 校验逻辑依赖 `fileName` 字段，但该字段通常为空
+
+2. 真正的文件名在 `files` 数组中，但没有被校验
+
+3. 后端作为最后防线，没有起到应有的拦截作用
+
+#### 2.3 问题传导链
+
+```text
+用户选择同名文件上传
+       ↓
+前端：fileName 不含扩展名，比对失败
+       ↓
+前端：静默去重，不提示用户
+       ↓
+后端：fileName 为空，跳过校验
+       ↓
+数据库：只保留第一个文件
+       ↓
+用户：以为上传成功，实际新文件丢失
+```
+
+### 三、解决方案
+
+#### 3.1 前端修复：提交前校验同名文件
+
+**核心思路** ：
+
+1. 获取完整文件名（含扩展名）
+
+2. 查找目标分类下的现有文件
+
+3. 比对是否存在同名文件
+
+4. 存在则提示并阻断提交
+
+**修复代码** ：
+
+```javascript
+const submit = async () => {
+  if (!isFormValid.value) return
+
+  const userFileName = fileName.value.trim()
+
+  // ========== 步骤1：获取完整文件名（含扩展名）==========
+  const getFullFileName = (item) => {
+    if (typeof item === 'string') {
+      return userFileName
+    }
+    // 优先使用上传时构造的完整文件名
+    const directName = item.fileNameWithExt || item.originalName
+    if (directName && directName.includes('.')) {
+      return directName
+    }
+    // 兜底：从原始文件名中提取扩展名后拼接
+    const original = item.originalFileName || item.name || ''
+    if (original.includes('.')) {
+      const ext = original.substring(original.lastIndexOf('.'))
+      return userFileName + ext
+    }
+    return item.fileName || userFileName
+  }
+
+  // 获取所有新上传文件的完整文件名
+  const newFullFileNames = urls.value.map(getFullFileName)
+
+  // ========== 步骤2：查找目标分类下的现有文件 ==========
+  let categoryFiles = []
+  if (originalCategoryData.value && originalCategoryData.value.length > 0) {
+    let targetNode = null
+
+    // 遍历三级目录结构，找到目标分类节点
+    for (const firstLevel of originalCategoryData.value) {
+      if (firstLevel.name === firstSelected.value) {
+        if (!secondSelected.value) {
+          targetNode = firstLevel
+          break
+        }
+
+        if (firstLevel.children) {
+          for (const secondLevel of firstLevel.children) {
+            if (secondLevel.name === secondSelected.value) {
+              if (!thirdSelected.value) {
+                targetNode = secondLevel
+                break
+              }
+
+              if (secondLevel.children) {
+                for (const thirdLevel of secondLevel.children) {
+                  if (thirdLevel.name === thirdSelected.value) {
+                    targetNode = thirdLevel
+                    break
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // 获取该分类下的现有文件
+    if (targetNode && targetNode.files && Array.isArray(targetNode.files)) {
+      categoryFiles = targetNode.files
+    }
+  }
+
+  // ========== 步骤3：检查是否存在同名文件 ==========
+  const normalizeName = (name) => (name || '').trim().toLowerCase()
+
+  // 构建现有文件名集合（忽略大小写）
+  const existingNameSet = new Set(
+    categoryFiles
+      .map((f) => normalizeName(f.fileName || f.name || f.originalName))
+      .filter((n) => n)
+  )
+
+  // 检查新文件是否与现有文件重名
+  const newNameSet = new Set()
+  for (const fullName of newFullFileNames) {
+    const normalized = normalizeName(fullName)
+    if (!normalized) continue
+
+    // 与现有文件重名，或与本次上传的其他文件重名
+    if (existingNameSet.has(normalized) || newNameSet.has(normalized)) {
+      uni.showToast({
+        title: '已存在同个名称的文件，请重新上传',
+        icon: 'none',
+        duration: 3000,
+      })
+      return  // 阻断提交
+    }
+    newNameSet.add(normalized)
+  }
+
+  // ========== 步骤4：通过校验，继续提交 ==========
+  // ... 后续提交逻辑
+}
+```
+
+#### 3.2 后端修复：基于实际文件名校验
+
+**核心思路** ：
+
+1. 从 `files` 数组中提取所有文件名
+
+2. 与数据库中该分类下的现有文件比对
+
+3. 发现重复则返回错误提示
+
+**修复代码** ：
+
+```javascript
+@Service
+public class CommunityArchiveService {
+
+    @Autowired
+    private FileService fileService;
+
+    @Autowired
+    private CommunityArchiveMapper archiveMapper;
+
+    /**
+     * 更新档案（添加文件）
+     */
+    public ResponseDTO<String> update(CommunityArchiveUpdateDTO dto) {
+        // 获取现有文件列表
+        List<String> existingFileKeys = archiveMapper.getFileKeysByCategoryId(dto.getId());
+
+        // 获取新上传的文件keys
+        List<String> newFileKeys = dto.getFiles().stream()
+            .map(FileDTO::getFileKey)
+            .filter(Objects::nonNull)
+            .collect(Collectors.toList());
+
+        // 计算真正新增的文件（差集）
+        List<String> addedFileKeys = newFileKeys.stream()
+            .filter(key -> !existingFileKeys.contains(key))
+            .collect(Collectors.toList());
+
+        if (!addedFileKeys.isEmpty()) {
+            // 获取已有文件的真实文件名
+            Set<String> existingFileNames = fileService.getFileNamesByKeys(existingFileKeys)
+                .stream()
+                .map(String::toLowerCase)
+                .collect(Collectors.toSet());
+
+            // 获取新增文件的真实文件名
+            List<String> newFileNames = fileService.getFileNamesByKeys(addedFileKeys);
+
+            // 检查是否有重复文件名
+            for (String newName : newFileNames) {
+                if (existingFileNames.contains(newName.toLowerCase())) {
+                    return ResponseDTO.userErrorParam("已存在同个名称的文件，请重新上传");
+                }
+            }
+        }
+
+        // 通过校验，执行更新
+        archiveMapper.update(dto);
+        return ResponseDTO.ok();
+    }
+}
+```
+
+#### 3.3 文件上传时保存完整文件名
+
+**前端上传成功后的处理** ：
+
+```javascript
+// 上传成功后，保存完整的文件信息
+uni.uploadFile({
+  // ... 上传配置
+  success: (uploadRes) => {
+    const res = JSON.parse(uploadRes.data)
+
+    if (res.code === 0 && res.data) {
+      // 关键：保存完整文件名（含扩展名）
+      const fileData = {
+        ...res.data,
+        fileName: userFileName,                    // 用户输入的名称
+        originalFileName: originalFileName,        // 原始文件名
+        fileNameWithExt: userFileName + fileExtension  // 完整文件名（含扩展名）
+      }
+
+      // 保存到文件列表
+      selectFileList.value = [{
+        name: originalFileName,
+        displayName: userFileName,
+        url: fileData.fileUrl,
+        resData: fileData
+      }]
+
+      urls.value = [fileData]
+    }
+  }
+})
+```
+
+### 四、完整Demo代码
+
+#### 4.1 前端：文件上传组件
+
+```vue
+<template>
+  <view class="upload-page">
+    <!-- 分类选择 -->
+    <view class="form-item" @click="showCategoryPicker">
+      <text class="label">分类</text>
+      <view class="value">
+        <text>{{ selectedCategory || '请选择文件分类' }}</text>
+        <uni-icons type="right" size="16" color="#CCC"></uni-icons>
+      </view>
+    </view>
+
+    <!-- 文件名输入 -->
+    <view class="form-item">
+      <text class="label">名称</text>
+      <input
+        class="input"
+        v-model="fileName"
+        placeholder="请输入文件名称"
+        :maxlength="15"
+      />
+    </view>
+
+    <!-- 上传区域 -->
+    <view class="upload-area" v-if="!uploadedFile">
+      <view
+        class="upload-btn"
+        :class="{ disabled: !canUpload }"
+        @click="handleUpload"
+      >
+        <uni-icons type="upload" size="40" :color="canUpload ? '#40E0D0' : '#CCC'" />
+        <text class="upload-text">点击上传文件</text>
+        <text class="upload-desc">支持常用文件格式，最大5MB</text>
+      </view>
+    </view>
+
+    <!-- 已上传文件展示 -->
+    <view class="uploaded-file" v-else>
+      <view class="file-info">
+        <uni-icons type="paperclip" size="24" color="#40E0D0" />
+        <text class="file-name">{{ uploadedFile.displayName }}</text>
+        <text class="file-status">上传成功</text>
+      </view>
+      <view class="file-actions">
+        <text class="action-btn delete" @click="removeFile">删除</text>
+        <text class="action-btn reupload" @click="reUpload">重新上传</text>
+      </view>
+    </view>
+
+    <!-- 底部按钮 -->
+    <view class="footer">
+      <button class="btn cancel" @click="cancel">取消</button>
+      <button class="btn submit" :disabled="!isFormValid" @click="submit">确定</button>
+    </view>
+  </view>
+</template>
+
+<script setup>
+import { ref, computed } from 'vue'
+
+// 表单数据
+const fileName = ref('')
+const selectedCategory = ref('')
+const selectedCategoryId = ref(null)
+const uploadedFile = ref(null)
+const categoryTree = ref([])  // 分类树数据
+
+// 分类选择状态
+const firstSelected = ref('')
+const secondSelected = ref('')
+const thirdSelected = ref('')
+
+// 表单验证
+const canUpload = computed(() => {
+  return selectedCategory.value && fileName.value.trim()
+})
+
+const isFormValid = computed(() => {
+  return canUpload.value && uploadedFile.value
+})
+
+/**
+ * 处理文件上传
+ */
+const handleUpload = () => {
+  if (!canUpload.value) {
+    uni.showToast({ title: '请先选择分类和输入文件名称', icon: 'none' })
+    return
+  }
+
+  const userFileName = fileName.value.trim()
+
+  wx.chooseMessageFile({
+    count: 1,
+    type: 'all',
+    success: (res) => {
+      const tempFile = res.tempFiles[0]
+      const originalFileName = tempFile.name
+
+      // 获取文件扩展名
+      const fileExtension = originalFileName.substring(originalFileName.lastIndexOf('.'))
+      const fullFileName = userFileName + fileExtension
+
+      // 检查文件大小
+      if (tempFile.size > 5 * 1024 * 1024) {
+        uni.showToast({ title: '文件大小不能超过5MB', icon: 'none' })
+        return
+      }
+
+      uni.showLoading({ title: '上传中...', mask: true })
+
+      // 上传文件
+      uni.uploadFile({
+        url: '/api/upload',
+        filePath: tempFile.path,
+        name: 'file',
+        success: (uploadRes) => {
+          const data = JSON.parse(uploadRes.data)
+
+          if (data.code === 0) {
+            // 保存文件信息，关键是保存完整文件名
+            uploadedFile.value = {
+              ...data.data,
+              fileName: userFileName,
+              originalFileName: originalFileName,
+              fileNameWithExt: fullFileName,  // 完整文件名（含扩展名）
+              displayName: originalFileName
+            }
+
+            uni.showToast({ title: '上传成功', icon: 'success' })
+          } else {
+            uni.showToast({ title: data.msg || '上传失败', icon: 'none' })
+          }
+        },
+        fail: () => {
+          uni.showToast({ title: '网络错误', icon: 'none' })
+        },
+        complete: () => {
+          uni.hideLoading()
+        }
+      })
+    }
+  })
+}
+
+/**
+ * 获取完整文件名（含扩展名）
+ */
+const getFullFileName = (file) => {
+  // 优先使用已保存的完整文件名
+  if (file.fileNameWithExt) {
+    return file.fileNameWithExt
+  }
+
+  // 从原始文件名提取扩展名
+  const original = file.originalFileName || file.name || ''
+  if (original.includes('.')) {
+    const ext = original.substring(original.lastIndexOf('.'))
+    return fileName.value.trim() + ext
+  }
+
+  return file.fileName || fileName.value.trim()
+}
+
+/**
+ * 查找目标分类下的现有文件
+ */
+const findCategoryFiles = () => {
+  if (!categoryTree.value || categoryTree.value.length === 0) {
+    return []
+  }
+
+  let targetNode = null
+
+  // 遍历三级目录结构
+  for (const first of categoryTree.value) {
+    if (first.name !== firstSelected.value) continue
+
+    if (!secondSelected.value) {
+      targetNode = first
+      break
+    }
+
+    for (const second of first.children || []) {
+      if (second.name !== secondSelected.value) continue
+
+      if (!thirdSelected.value) {
+        targetNode = second
+        break
+      }
+
+      for (const third of second.children || []) {
+        if (third.name === thirdSelected.value) {
+          targetNode = third
+          break
+        }
+      }
+    }
+  }
+
+  return targetNode?.files || []
+}
+
+/**
+ * 提交表单
+ */
+const submit = async () => {
+  if (!isFormValid.value) return
+
+  // ========== 重点：提交前检查同名文件 ==========
+  const fullFileName = getFullFileName(uploadedFile.value)
+  const categoryFiles = findCategoryFiles()
+
+  // 文件名归一化（忽略大小写）
+  const normalizeName = (name) => (name || '').trim().toLowerCase()
+
+  // 构建现有文件名集合
+  const existingNames = new Set(
+    categoryFiles
+      .map(f => normalizeName(f.fileName || f.name))
+      .filter(Boolean)
+  )
+
+  // 检查是否存在同名文件
+  if (existingNames.has(normalizeName(fullFileName))) {
+    uni.showToast({
+      title: '已存在同个名称的文件，请重新上传',
+      icon: 'none',
+      duration: 3000
+    })
+    return  // 阻断提交
+  }
+
+  // 通过校验，提交数据
+  try {
+    const data = {
+      id: selectedCategoryId.value,
+      files: [{
+        ...uploadedFile.value,
+        fileName: fullFileName  // 使用完整文件名
+      }]
+    }
+
+    await addArchiveFile(data)
+
+    uni.showToast({ title: '新增成功', icon: 'success' })
+    setTimeout(() => {
+      uni.navigateBack()
+    }, 1500)
+  } catch (error) {
+    uni.showToast({ title: '新增失败', icon: 'none' })
+  }
+}
+
+/**
+ * 移除文件
+ */
+const removeFile = () => {
+  uploadedFile.value = null
+}
+
+/**
+ * 重新上传
+ */
+const reUpload = () => {
+  uploadedFile.value = null
+  handleUpload()
+}
+
+const cancel = () => {
+  uni.navigateBack()
+}
+</script>
+
+<style scoped lang="scss">
+.upload-page {
+  min-height: 100vh;
+  background: #f5f5f5;
+  padding: 16px;
+}
+
+.form-item {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  background: #fff;
+  margin-bottom: 1px;
+
+  .label {
+    width: 60px;
+    color: #666;
+    font-size: 14px;
+  }
+
+  .value {
+    flex: 1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #333;
+  }
+
+  .input {
+    flex: 1;
+    font-size: 14px;
+  }
+}
+
+.upload-area {
+  margin-top: 16px;
+  background: #fff;
+  border-radius: 8px;
+  padding: 24px;
+}
+
+.upload-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px;
+  border: 2px dashed #e5e5e5;
+  border-radius: 8px;
+
+  &.disabled {
+    opacity: 0.5;
+  }
+
+  .upload-text {
+    margin-top: 12px;
+    font-size: 16px;
+    color: #333;
+  }
+
+  .upload-desc {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #999;
+  }
+}
+
+.uploaded-file {
+  margin-top: 16px;
+  background: #fff;
+  border-radius: 8px;
+  padding: 16px;
+
+  .file-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .file-name {
+    flex: 1;
+    font-size: 14px;
+    color: #333;
+  }
+
+  .file-status {
+    font-size: 12px;
+    color: #52c41a;
+  }
+
+  .file-actions {
+    display: flex;
+    gap: 24px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #eee;
+  }
+
+  .action-btn {
+    font-size: 14px;
+
+    &.delete { color: #ff4d4f; }
+    &.reupload { color: #40E0D0; }
+  }
+}
+
+.footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  background: #fff;
+  box-shadow: 0 -2px 8px rgba(0,0,0,0.05);
+
+  .btn {
+    flex: 1;
+    height: 44px;
+    border-radius: 8px;
+    font-size: 16px;
+
+    &.cancel {
+      background: #f5f5f5;
+      color: #666;
+    }
+
+    &.submit {
+      background: #40E0D0;
+      color: #fff;
+
+      &:disabled {
+        background: #ccc;
+      }
+    }
+  }
+}
+</style>
+```
+
+#### 4.2 后端：档案服务
+
+```javascript
+@Service
+@Slf4j
+public class ArchiveService {
+
+    @Autowired
+    private ArchiveMapper archiveMapper;
+
+    @Autowired
+    private FileService fileService;
+
+    /**
+     * 添加档案文件
+     * @param dto 档案更新DTO
+     * @return 操作结果
+     */
+    public ResponseDTO<String> addArchiveFile(ArchiveUpdateDTO dto) {
+        // 获取该分类下现有的文件keys
+        List<String> existingFileKeys = archiveMapper.getFileKeysByCategoryId(dto.getId());
+
+        // 提取新上传的文件keys
+        List<String> newFileKeys = dto.getFiles().stream()
+            .map(FileDTO::getFileKey)
+            .filter(Objects::nonNull)
+            .collect(Collectors.toList());
+
+        // 计算真正新增的文件（排除已存在的）
+        List<String> addedFileKeys = newFileKeys.stream()
+            .filter(key -> !existingFileKeys.contains(key))
+            .collect(Collectors.toList());
+
+        if (!addedFileKeys.isEmpty()) {
+            // 获取现有文件的真实文件名（含扩展名）
+            Set<String> existingFileNames = fileService.getFileNamesByKeys(existingFileKeys)
+                .stream()
+                .map(String::toLowerCase)  // 忽略大小写
+                .collect(Collectors.toSet());
+
+            // 获取新增文件的真实文件名
+            List<String> newFileNames = fileService.getFileNamesByKeys(addedFileKeys);
+
+            // 校验是否有重复文件名
+            for (String newName : newFileNames) {
+                String normalizedName = newName.toLowerCase();
+                if (existingFileNames.contains(normalizedName)) {
+                    log.warn("文件名重复: {}, 分类ID: {}", newName, dto.getId());
+                    return ResponseDTO.userErrorParam("已存在同个名称的文件，请重新上传");
+                }
+            }
+        }
+
+        // 通过校验，执行更新
+        archiveMapper.addFiles(dto.getId(), dto.getFiles());
+        log.info("档案文件添加成功, 分类ID: {}, 文件数量: {}", dto.getId(), dto.getFiles().size());
+
+        return ResponseDTO.ok();
+    }
+}
+```
+
+#### 4.3API接口定义
+
+```javascript
+// api/archive.js
+
+/**
+ * 获取档案分类树
+ * @param {string} communityId - 组织ID
+ */
+export function getArchiveTree(communityId) {
+  return request({
+    url: '/archive/tree',
+    method: 'get',
+    params: { communityId }
+  })
+}
+
+/**
+ * 添加档案文件
+ * @param {Object} data - 档案数据
+ * @param {number} data.id - 分类ID
+ * @param {Array} data.files - 文件列表
+ */
+export function addArchiveFile(data) {
+  return request({
+    url: '/archive/add',
+    method: 'post',
+    data
+  })
+}
+```
+
+### 五、经验总结
+
+#### 5.1 文件重复校验的要点
+
+| 要点 | 说明 |
+|:---:|:---:|
+| 使用完整文件名 | 必须包含扩展名，如 `合同.pdf` 而非 `合同` |
+| 忽略大小写 | `File.PDF` 和 `file.pdf` 应视为相同 |
+| 前端先校验 | 提升用户体验，避免无效请求 |
+| 后端兜底 | 作为最后防线，确保数据一致性 |
+| 明确提示 | 告知用户具体原因，而非静默失败 |
+
+#### 5.2 文件名处理的最佳实践
+
+```javascript
+// 归一化文件名（用于比较）
+const normalizeName = (name) => {
+  return (name || '')
+    .trim()           // 去除首尾空格
+    .toLowerCase()    // 统一小写
+}
+
+// 获取完整文件名（含扩展名）
+const getFullFileName = (userInput, originalFile) => {
+  // 从原始文件名提取扩展名
+  const ext = originalFile.substring(originalFile.lastIndexOf('.'))
+  return userInput + ext
+}
+
+// 校验文件名是否重复
+const isDuplicate = (newName, existingNames) => {
+  const normalized = normalizeName(newName)
+  return existingNames.some(name => normalizeName(name) === normalized)
+}
+```
+
+#### 5.3 为什么需要前后端双重校验？
+
+| 层级 | 作用 | 优势 |
+|:---:|:---:|:---:|
+| 前端校验 | 即时反馈 | 用户体验好，减少服务器压力 |
+| 后端校验 | 数据安全 | 防止绕过前端，确保数据一致 |
+
+**双重校验的必要性** ：
+
+1. 前端代码可被绕过（直接调用API）
+
+2. 多端访问（小程序、H5、PC）可能逻辑不一致
+
+3. 并发上传时可能产生竞态条件
+
+#### 5.4 本问题的核心教训
+
+| 问题 | 教训 |
+|:---:|:---:|
+| 静默去重 | 任何数据处理都应给用户明确反馈 |
+| 文件名不完整 | 文件名必须包含扩展名才能准确比对 |
+| 后端校验缺失 | 关键业务逻辑必须有后端兜底 |
+| 大小写敏感 | 文件名比较应忽略大小写 |
+
+**一句话总结** ：文件上传场景中，重复校验必须使用完整文件名（含扩展名），且前后端都要做校验，避免静默失败导致用户数据丢失。
+
+---
+
+*这个案例说明：任何影响用户数据的操作，都不应该静默失败。即使是"去重"这样看似友好的功能，如果没有明确提示，也会让用户困惑。前后端协同校验是保证数据安全和用户体验的关键。* 

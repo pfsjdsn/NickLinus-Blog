@@ -1,0 +1,206 @@
+---
+title: "Vue——vue3 打包优化与资源压缩"
+date: 2026-07-11
+description: ""
+author: "NickLinus"
+category: "Vue"
+thumbnail: ""
+published: true
+---
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/156925769
+
+**背景问题：** 
+需要优化打包体积和加载速度。
+
+**方案思考：** 
+通过代码分割、压缩和资源优化来减少打包体积。
+
+**具体实现：** 
+Vite配置优化：
+
+```javascript
+// vite.config.js
+import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
+import { compression } from 'vite-plugin-compression'
+import { visualizer } from 'rollup-plugin-visualizer'
+
+export default defineConfig({
+  plugins: [
+    vue(),
+    // Gzip压缩
+    compression({
+      algorithm: 'gzip',
+      threshold: 10240 // 超过10KB的文件进行压缩
+    }),
+    // 包分析工具
+    visualizer({
+      filename: './dist/stats.html',
+      open: true,
+      gzipSize: true,
+      brotliSize: true
+    })
+  ],
+  build: {
+    rollupOptions: {
+      output: {
+        // 分包优化
+        manualChunks: {
+          // Vue核心库
+          vue: ['vue', 'vue-router', 'pinia'],
+          // UI组件库
+          element: ['element-plus'],
+          // 工具库
+          utils: ['lodash-es', 'axios'],
+          // 图表库
+          charts: ['echarts']
+        },
+        // 或者使用函数方式更灵活地分包
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('vue') || id.includes('pinia') || id.includes('vue-router')) {
+              return 'vue'
+            }
+            if (id.includes('element-plus')) {
+              return 'element'
+            }
+            if (id.includes('lodash') || id.includes('axios')) {
+              return 'utils'
+            }
+            if (id.includes('echarts')) {
+              return 'charts'
+            }
+            return 'vendor'
+          }
+        }
+      }
+    },
+    // 压缩配置
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true, // 移除console
+        drop_debugger: true, // 移除debugger
+        pure_funcs: ['console.log'] // 移除指定函数
+      },
+      format: {
+        comments: false // 移除注释
+      }
+    },
+    // 启用CSS分割
+    cssCodeSplit: true
+  },
+  // 预加载脚本
+  optimizeDeps: {
+    include: ['element-plus/lib/locale/lang/zh-cn'], // 预加载国际化文件
+  }
+})
+```
+
+代码分割优化：
+
+```javascript
+// utils/lazy-load.js
+// 动态导入工具函数
+export class LazyLoad {
+  // 带错误处理的懒加载
+  static async lazyImport(importFunction, retries = 3) {
+    for (let i = 0; i < retries; i++) {
+      try {
+        return await importFunction()
+      } catch (error) {
+        if (i === retries - 1) {
+          throw error
+        }
+        // 延迟后重试
+        await new Promise(resolve => setTimeout(resolve, 1000))
+      }
+    }
+  }
+  
+  // 路由懒加载
+  static routeLazyLoader(path) {
+    return () => import(`../views${path}.vue`)
+  }
+  
+  // 组件懒加载
+  static componentLazyLoader(path) {
+    return () => import(`../components${path}.vue`)
+  }
+  
+  // 带加载提示的懒加载
+  static async lazyWithLoading(importFunction, setLoading) {
+    try {
+      setLoading && setLoading(true)
+      const module = await importFunction()
+      return module
+    } finally {
+      setLoading && setLoading(false)
+    }
+  }
+}
+```
+
+路由懒加载：
+
+```javascript
+// router/index.js
+import { createRouter, createWebHistory } from 'vue-router'
+
+const routes = [
+  {
+    path: '/',
+    name: 'Home',
+    component: () => import('@/views/Home.vue'), // 懒加载
+    meta: { title: '首页' }
+  },
+  {
+    path: '/about',
+    name: 'About',
+    component: () => import('@/views/About.vue'), // 懒加载
+    meta: { title: '关于我们' }
+  },
+  // 按功能分组的懒加载
+  {
+    path: '/user',
+    component: () => import('@/layouts/index.vue'),
+    children: [
+      {
+        path: 'profile',
+        name: 'UserProfile',
+        component: () => import('@/views/user/Profile.vue'),
+        meta: { title: '用户资料' }
+      },
+      {
+        path: 'settings',
+        name: 'UserSettings',
+        component: () => import('@/views/user/Settings.vue'),
+        meta: { title: '用户设置' }
+      }
+    ]
+  },
+  // 大型功能模块单独打包
+  {
+    path: '/admin',
+    name: 'Admin',
+    component: () => import('@/views/admin/index.vue'),
+    meta: { title: '管理后台' },
+    children: [
+      {
+        path: 'dashboard',
+        name: 'AdminDashboard',
+        component: () => import('@/views/admin/Dashboard.vue'),
+        meta: { title: '管理面板' }
+      }
+    ]
+  }
+]
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes
+})
+
+export default router
+```

@@ -1,0 +1,79 @@
+---
+title: "Vue——vue3路由搭建"
+date: 2026-07-11
+description: ""
+author: "NickLinus"
+category: "Vue"
+thumbnail: ""
+published: true
+---
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/127202615
+
+详见vue3路由官网：https://router.vuejs.org/zh/installation.html
+
+安装路由
+
+```bash
+npm install vue-router@4
+```
+
+配置路由
+
+src\router\index.js文件
+
+```javascript
+import { createRouter, createWebHashHistory } from 'vue-router'
+// 1. 定义路由组件.
+// 也可以从其他文件导入
+const Home = { template: '<div>Home</div>' }
+const About = { template: '<div>About</div>' }
+
+// 2. 定义一些路由
+// 每个路由都需要映射到一个组件。
+// 我们后面再讨论嵌套路由。
+const routes = [
+    { path: '/', component: Home },
+    { path: '/about', component: About },
+
+]
+
+// 3. 创建路由实例并传递 `routes` 配置
+// 你可以在这里输入更多的配置，但我们在这里
+// 暂时保持简单
+const router = createRouter({
+    // 4. 内部提供了 history 模式的实现。为了简单起见，我们在这里使用 hash 模式。
+    history: createWebHashHistory(),
+    routes, // `routes: routes` 的缩写
+})
+
+export default router
+```
+
+App.vue
+
+```vue
+<template>
+  <img alt="Vue logo" src="./assets/logo.png" />
+  <HelloWorld msg="Hello Vue 3.0 + Vite" />
+  <router-link to="/">Go to Home</router-link>
+  <router-link to="/about">Go to About</router-link>
+
+  <router-view></router-view>
+</template>
+```
+
+main.js
+
+```javascript
+import { createApp } from 'vue'
+import App from './App.vue'
+import './index.css'
+import router from './router'
+
+let app = createApp(App)
+// 使用路由
+app.use(router)
+app.mount('#app')
+
+```

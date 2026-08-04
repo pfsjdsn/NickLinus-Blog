@@ -1,0 +1,36 @@
+---
+title: "微信小程序——自动适配屏幕高度与宽度"
+date: 2020-10-20
+description: "wxml文件"
+author: "NickLinus"
+category: "微信小程序"
+thumbnail: ""
+published: true
+---
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/109184903
+
+wxml文件
+
+```html
+<view class="page" style="height:{{windowHeight * 2}}rpx"></view>
+
+```
+
+js文件
+
+```javascript
+data: {
+windowHeight: 0
+}
+onLoad: function (options) {
+	const that = this
+			wx.getSystemInfo({
+			success(res) {
+				that.setData({
+					windowHeight: res.windowHeight // 宽度为res.windowWidth
+				})
+			}
+		})
+}
+```

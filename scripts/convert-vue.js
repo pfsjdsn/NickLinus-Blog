@@ -2,7 +2,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const sourceDir = 'C:\\Users\\admin\\Downloads\\Vue_dbt@lll的博客-CSDN博客';
+const sourceDir = 'C:\\Users\\admin\\Desktop\\NickLinus Blog\\微信小程序_dbt@lll的博客-CSDN博客 (1)';
 const targetDir = 'posts/Vue';
 
 const titles = [

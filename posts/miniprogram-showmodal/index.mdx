@@ -1,0 +1,27 @@
+---
+title: "微信小程序——showModal 弹出框"
+date: 2020-09-10
+description: ".js文件"
+author: "NickLinus"
+category: "微信小程序"
+thumbnail: ""
+published: true
+---
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/108507127
+
+**.js文件** 
+
+```javascript
+demo: function() {
+    wx.showModal({
+        title: '标题', 
+        content: '提示的内容',
+        confirmText: '确定', //确认按钮的文字，最多 4 个字符 
+        confirmColor: '#346EFE', //确认按钮的文字颜色，必须是 16 进制格式的颜色字符串
+        showCancel: false, // 是否显示取消按钮
+		cancelText: '取消' //取消按钮的文字，最多 4 个字符
+		cancelColor: '#346EFE' // 取消按钮的文字颜色，必须是 16 进制格式的颜色字符串
+    })
+}
+```

@@ -1,0 +1,23 @@
+---
+title: "微信小程序——less 中使用calc"
+date: 2021-01-26
+description: "100vh表示屏幕高度 错误写法： height: calc(100vh - 90rpx); // 效果 height: 10vh; 正确写法： height: 'calc(100vh - 90rpx)'; //效果 height: calc(100vh - 90rpx);"
+author: "NickLinus"
+category: "微信小程序"
+thumbnail: ""
+published: true
+---
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/112799171
+
+```css
+100vh表示屏幕高度
+错误写法：
+height: calc(100vh - 90rpx);
+// 效果
+height: 10vh;
+正确写法：
+height: ~'calc(100vh - 90rpx)';
+//效果
+height: calc(100vh - 90rpx);
+```

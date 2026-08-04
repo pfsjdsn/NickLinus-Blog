@@ -1,0 +1,90 @@
+---
+title: "微信小程序——列表只可多选，只能选择3项"
+date: 2020-12-11
+description: "wxml文件"
+author: "NickLinus"
+category: "微信小程序"
+thumbnail: ""
+published: true
+---
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/111035643
+
+**wxml文件** 
+
+```html
+<view class="demo-page">
+    <view class="btn-group" wx:for="{{list}}" wx:key="index">
+    <button class="mini-btn  {{item.isChecked ? 'active': ''}}" data-id="{{item.id}}" data-index="{{index}}"
+        data-isChecked="{{item.isChecked}}" bindtap="selectFarmer" data-text="{{item.type}}">{{item.type}}
+        <iconfont name="iconduigou1" class="iconduigou1" wx:if="{{item.isChecked}}"></iconfont>
+    </button>
+    </view>
+</view>
+```
+
+**js文件** 
+
+```javascript
+Page({
+	data: {
+		name: [], 
+		list: [{
+				id: 0,
+				type: 'aa',
+				isChecked: false
+			},
+			{
+				id: 1,
+				type: 'bb',
+				isChecked: false
+			},
+			{
+				id: 2,
+				type: 'cc',
+				isChecked: false
+			},
+			{
+				id: 3,
+				type: 'dd',
+				isChecked: false
+			}
+		],
+	},
+	select: function (e) {
+		const that = this
+		const currItem = that.data.list.find(item => e.currentTarget.dataset.id == item.id)
+		if (!currItem.isChecked && that.data.name.length >= 3) {
+			wx.showToast({
+				title: '最多只能选三项！',
+				icon: 'none'
+			})
+		} else {
+			currItem.isChecked = !currItem.isChecked
+			if (currItem.isChecked) {
+
+				that.setData({
+					abc: currItem.type,
+					name: [...that.data.name, currItem.type]
+				})
+				that.setData({
+					clickFilterFalg: true
+				})
+				wx.setStorageSync('clickFilterFalg', that.data.clickFilterFalg)
+			} else {
+				const findIndex = that.data.name.findIndex(item => item == currItem.type)
+				if (findIndex >= 0) {
+					that.data.name.splice(findIndex, 1)
+				}
+			}
+		}
+		that.setData({
+			list: that.data.list
+		})
+	},
+})
+```
+
+**效果** 
+
+ ![在这里插入图片描述](/images/wechat/056_1.gif)

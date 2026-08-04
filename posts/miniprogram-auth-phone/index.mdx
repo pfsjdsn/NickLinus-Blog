@@ -1,0 +1,43 @@
+---
+title: "微信小程序——微信授权获取手机号弹窗（官方自带）"
+date: 2020-09-09
+description: ".wxml文件"
+author: "NickLinus"
+category: "微信小程序"
+thumbnail: ""
+published: true
+---
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/108503859
+
+**.wxml文件** 
+
+```html
+<button open-type="getPhoneNumber" bindgetphonenumber="getPhoneNumber">微信登录</button>
+```
+
+**.js文件** 
+
+```javascript
+// 微信授权获取手机号弹窗
+	getPhoneNumber: function (e) {
+		var that = this;
+		if (e.detail.errMsg == "getPhoneNumber:ok") {
+			this.getLocation()
+			wx.request({
+				url: 'http://localhost/index/users/decodePhone',
+				data: {
+					encryptedData: e.detail.encryptedData,
+					iv: e.detail.iv,
+					sessionKey: that.data.session_key,
+					uid: "",
+				},
+				method: "post",
+				success: function (res) {
+					console.log('res...', res);
+					
+				}
+			})
+		}
+	}
+```

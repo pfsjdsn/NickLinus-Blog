@@ -1,0 +1,30 @@
+---
+title: "微信小程序——遮罩层样式"
+date: 2020-10-27
+description: "wxml文件"
+author: "NickLinus"
+category: "微信小程序"
+thumbnail: ""
+published: true
+---
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/109305025
+
+**wxml文件** 
+
+```html
+<view class="mark">此处有个遮罩层</view>
+```
+
+**wxss文件** 
+
+```css
+.mark {
+        position: fixed;
+        left:0;
+        top:0;
+        width:100%;
+        height:100%;
+        z-index:1000;
+        background-color: rgba(0, 0, 0, 0.4);
+```

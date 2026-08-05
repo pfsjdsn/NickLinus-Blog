@@ -1,16 +1,12 @@
-import { getConfig } from "~lib/config";
 import type { MetadataRoute } from "next";
 
-export default function robots(): MetadataRoute.Robots {
-  const config = getConfig();
-  const siteUrl = config.url || "http://localhost:3000";
+import { siteConfig } from "@/lib/config";
 
+export default function robots(): MetadataRoute.Robots {
+  const base = siteConfig.url;
   return {
-    rules: {
-      userAgent: "*",
-      allow: "/",
-      disallow: "/api/",
-    },
-    sitemap: `${siteUrl}/sitemap.xml`,
+    rules: [{ userAgent: "*" }],
+    sitemap: `${base}/sitemap.xml`,
+    host: base,
   };
 }

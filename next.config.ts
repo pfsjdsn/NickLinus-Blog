@@ -1,24 +1,15 @@
-import type { NextConfig } from "next";
-import createMDX from "@next/mdx";
+import { createMDX } from "fumadocs-mdx/next";
 
-const securityHeaders = [
-  { key: "X-DNS-Prefetch-Control", value: "on" },
-  { key: "X-Frame-Options", value: "DENY" },
-  { key: "X-Content-Type-Options", value: "nosniff" },
-  { key: "Referrer-Policy", value: "origin-when-cross-origin" },
-  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
-];
-
-const nextConfig: NextConfig = {
-  pageExtensions: ["js", "jsx", "ts", "tsx", "md", "mdx"],
-  reactStrictMode: true,
-  async headers() {
-    return [{ source: "/(.*)", headers: securityHeaders }];
+const nextConfig = {
+  poweredByHeader: false,
+  compiler: {
+    removeConsole: process.env.NODE_ENV === "production",
+  },
+  experimental: {
+    optimizePackageImports: ["lucide-react"] as string[],
   },
 };
 
-const withMDX = createMDX({
-  extension: /\.mdx?$/,
-});
+const withMDX = createMDX();
 
 export default withMDX(nextConfig);

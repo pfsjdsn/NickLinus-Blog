@@ -1,0 +1,26 @@
+---
+title: "微信小程序——字符串截取首个符号前面字符/最后一个符号后面字符"
+description: "定义 indexOf() ： 判断一个字符是否在字符串中 存在，如果存在返回该元素或字符第一次出现 的 位置 的 索引，不存在返回-1。 lastIndexOf() ： 返回一个指定的字符串值最后出现的位置，在一个字符串中的指定位置从后向前搜索。 stringObject.substring(..."
+date: "2026-07-12"
+tags:
+  - 微信小程序
+published: true
+---
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/109257018
+
+**定义** 
+**indexOf() ：** 判断一个字符是否在字符串中 存在，如果存在返回该元素或字符第一次出现 的 位置 的 索引，不存在返回-1。
+**lastIndexOf() ：** 返回一个指定的字符串值最后出现的位置，在一个字符串中的指定位置从后向前搜索。
+stringObject.substring(start,stop) 用于提取字符串中介于两个指定下标之间的字符。
+
+```javascript
+let str = 'abcd/demo1/demo2'
+截取第一个/前面的字符
+var str1=str.substring(0, str.indexOf("/"));
+console.log(str1) //abcd
+
+截取最后一个/后面的字符
+var str2=str.substring(str.lastIndexOf("/")+1,str.length)
+console.log(str2) //demo2
+```

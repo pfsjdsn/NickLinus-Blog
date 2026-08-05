@@ -1,0 +1,30 @@
+---
+title: "Vue——vue中v-for循环图片无法显示"
+description: "Vue中v-for循环渲染图片无法显示的解决方法，分析动态路径绑定和静态资源import的正确写法。"
+date: "2026-07-11"
+tags:
+  - Vue
+published: true
+---
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/110916382
+
+**解决方法: 使用require调用路径** 
+
+```vue
+<div v-for="(item, index) in imgList" :key="index">
+    <img :src="item">
+</div>
+```
+
+```vue
+<script>
+export default {
+  data() {
+    return { 
+      imgList:['require("../../assets/a.jpg")','require("../../assets/b.jpg")']
+    };
+  },
+};
+</script>
+```

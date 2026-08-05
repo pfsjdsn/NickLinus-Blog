@@ -1,0 +1,39 @@
+---
+title: "微信小程序——调用全局变量的方法"
+description: "app.js文件"
+date: "2026-07-22"
+tags:
+  - 微信小程序
+published: true
+---
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/108546379
+
+**app.js文件** 
+
+```javascript
+	demo: function () { //获取openId
+		const _this = this
+		return new Promise(function (resolve, reject) {
+			wx.login({
+				success(res) {
+					console.log(res);
+					
+				}
+			})
+		})
+	},
+```
+
+**在demo文件中调用** 
+
+**demo.js文件** 
+
+```javascript
+onLoad: function (options){
+app.demo().then(res => { //登录获取身份信息
+        console.log('调用全局变量的方法有成功！')
+    }
+})
+}
+```

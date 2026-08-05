@@ -1,43 +1,20 @@
-import fs from "fs";
-import path from "path";
-import { MetadataRoute } from "next";
-import { getConfig } from "~lib/config";
-import { getAllPosts } from "~utils/posts";
+import type { MetadataRoute } from "next";
+
+import { siteConfig } from "@/lib/config";
+import { getAllPosts } from "@/lib/posts";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const config = getConfig();
-  const siteUrl = config.url;
-  const posts = getAllPosts();
-  const entries: MetadataRoute.Sitemap = [];
+  const base = siteConfig.url;
+  const pages: MetadataRoute.Sitemap = [
+    { url: `${base}/`, lastModified: new Date() },
+    { url: `${base}/about`, lastModified: new Date() },
+    { url: `${base}/tags`, lastModified: new Date() },
+  ];
 
-  // Posts index
-  entries.push({
-    url: siteUrl,
-    lastModified: new Date(),
-    changeFrequency: "weekly",
-    priority: 1,
-  });
+  const posts = getAllPosts().map((p) => ({
+    url: `${base}${p.url}`,
+    lastModified: p?.data?.date ? new Date(p.data.date) : new Date(),
+  }));
 
-  // Resume (only if the page exists)
-  const resumePath = path.join(process.cwd(), "app", "resume", "page.tsx");
-  if (fs.existsSync(resumePath)) {
-    entries.push({
-      url: `${siteUrl}/resume`,
-      lastModified: new Date(),
-      changeFrequency: "monthly",
-      priority: 0.5,
-    });
-  }
-
-  // Individual posts
-  for (const post of posts) {
-    entries.push({
-      url: `${siteUrl}/post/${post.slug}`,
-      lastModified: new Date(post.metadata.date),
-      changeFrequency: "monthly",
-      priority: 0.8,
-    });
-  }
-
-  return entries;
+  return [...pages, ...posts];
 }

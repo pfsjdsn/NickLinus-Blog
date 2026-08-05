@@ -1,0 +1,58 @@
+---
+title: "微信小程序——onPullDownRefresh (下拉刷新)"
+description: "思路"
+date: "2026-07-12"
+tags:
+  - 微信小程序
+published: true
+---
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/112800714
+
+思路
+
+- onPullDownRefresh (下拉刷新)
+
+- 1 当前页面数据置空
+
+- 2 当前页码重置为1
+
+- 3 重新请求页面数据接口
+  */
+
+```javascript
+  // 下拉刷新
+  onPullDownRefresh() {
+    console.log('我下拉刷新了');
+    // 重置数组
+    this.setData({
+      goodsList: []
+    })
+    // 重置页码
+    this.params.pagenum = 1
+    // 发送请求
+    this.getList() //请求当前页面数据
+  }
+```
+
+当前文件的json文件
+
+```json
+{
+  "navigationBarTitleText": "商品列表",
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark"
+}
+```
+
+下拉刷新后，关闭下拉刷新的窗口
+
+```javascript
+getList（）{
+	// 请求数据后
+
+	    // 关闭下拉刷新的窗口
+    wx.stopPullDownRefresh()
+}
+
+```

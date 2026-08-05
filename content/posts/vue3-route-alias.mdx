@@ -1,0 +1,51 @@
+---
+title: "Vue——vue3路由alias别名写法"
+description: "Vue3路由alias别名的写法详解，讲解路由别名配置方法、使用技巧和实际应用场景。"
+date: "2026-07-11"
+tags:
+  - Vue
+published: true
+---
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/127202787
+
+router\index.js 路由配置文件
+
+```javascript
+import { createRouter, createWebHashHistory } from 'vue-router'
+import Shop from '../components/shop.vue'
+
+//  定义一些路由
+const routes = [
+
+    {
+        path: '/shop',
+        // 单个别名
+        // alias: '/abc',
+        // 多个别名
+        alias: ["/a", '/b'],
+        components: Shop
+    }
+]
+
+// 创建路由实例并传递 `routes` 配置
+const router = createRouter({
+    // 内部提供了 history 模式的实现。为了简单起见，我们在这里使用 hash 模式。
+    history: createWebHashHistory(),
+    routes, // `routes: routes` 的缩写
+})
+
+export default router
+```
+
+使用：
+
+在浏览器中输入
+
+http://localhost:3000/#/abc  或
+
+http://localhost:3000/#/a       或
+
+http://localhost:3000/#/b
+
+都可到达 shop页面

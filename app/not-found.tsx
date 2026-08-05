@@ -1,21 +1,13 @@
 import Link from "next/link";
-import { Metadata } from "next";
-
-export const metadata: Metadata = {
-  title: "Page Not Found",
-};
 
 export default function NotFound() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] gap-4">
-      <h1 className="text-4xl font-bold">404</h1>
-      <p className="text-muted-foreground">Page not found.</p>
-      <Link
-        href="/"
-        className="text-sm underline underline-offset-4 hover:text-primary transition-colors"
-      >
-        Back to posts
+    <main className="flex min-h-[60svh] flex-col items-center justify-center gap-4 text-center">
+      <h1 className="text-3xl font-bold">页面未找到</h1>
+      <p className="text-muted-foreground">你访问的页面不存在或已被移动。</p>
+      <Link href="/" className="text-primary underline underline-offset-4">
+        返回首页
       </Link>
-    </div>
+    </main>
   );
 }

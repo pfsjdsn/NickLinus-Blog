@@ -1,0 +1,25 @@
+---
+title: "微信小程序——对象中添加元素"
+description: "data: { coverObj: {}, } onload() { let {coverObj} = this.data coverObj.age =  18 coverObj.name =  jack this.setData({ coverObj }) console.log(this...."
+date: "2026-07-15"
+tags:
+  - 微信小程序
+published: true
+---
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/112820611
+
+```javascript
+ data: {
+    coverObj: {},
+  }
+onload() {
+let {coverObj} = this.data
+	 coverObj.age =  18
+	 coverObj.name =  jack
+	  this.setData({
+      coverObj
+    })
+    console.log(this.data.coverObj) // {age： 18，name： 'jack' }
+}
+```

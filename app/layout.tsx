@@ -1,92 +1,102 @@
-import { Analytics } from "@vercel/analytics/next";
-import "~styles/globals.css";
-import { Metadata } from "next";
-import Header from "~components/header";
-import ThemeProvider from "~styles/themeProvider";
-import { getConfig } from "~lib/config";
-import GoogleAnalytics from "~components/GoogleAnalytics";
+import { Suspense } from "react";
+import type { Metadata } from "next";
 
-const config = getConfig();
+import { META_THEME_COLORS, siteConfig } from "@/lib/config";
+import { fontVariables } from "@/lib/fonts";
+import { cn } from "@/lib/utils";
+import { Analytics } from "@/components/analytics";
+import { ProgressBar } from "@/components/progress-bar";
+import { SearchProvider } from "@/components/search";
+import { ThemeProvider } from "@/components/theme-provider";
+
+import "@/styles/globals.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(config.url || "http://localhost:3000"),
   title: {
-    default: config.title,
-    template: `%s | ${config.title}`,
+    default: siteConfig.name,
+    template: `%s - ${siteConfig.name}`,
   },
-  description: config.description,
-  authors: [{ name: config.author.name }],
-  icons: {
-    icon: [
-      { url: "/favicon-light.svg", media: "(prefers-color-scheme: light)" },
-      { url: "/favicon-dark.svg", media: "(prefers-color-scheme: dark)" },
-    ],
-  },
-  alternates: {
-    types: {
-      "application/rss+xml": "/feed.xml",
+  metadataBase: new URL(siteConfig.url),
+  description: siteConfig.description,
+  keywords: ["xblog", "未知博客"],
+  authors: [
+    {
+      name: "wekeey",
+      url: "https://blog.xapp.xyz",
     },
-  },
+  ],
+  creator: "wekeey",
   openGraph: {
     type: "website",
-    siteName: config.title,
-    title: config.title,
-    description: config.description,
+    locale: "zh_CN",
+    url: siteConfig.url,
+    title: siteConfig.name,
+    description: siteConfig.description,
+    siteName: siteConfig.name,
+    images: [
+      {
+        url: `${siteConfig.url}/opengraph-image.png`,
+        width: 1200,
+        height: 630,
+        alt: siteConfig.name,
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: config.title,
-    description: config.description,
+    title: siteConfig.name,
+    description: siteConfig.description,
+    images: [`${siteConfig.url}/opengraph-image.png`],
+    creator: "@wekeey",
   },
-  ...(config.googleVerification && {
-    verification: { google: config.googleVerification },
-  }),
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon-16x16.png",
+    apple: "/apple-touch-icon.png",
+  },
+  manifest: `${siteConfig.url}/site.webmanifest`,
 };
 
-const RootLayout = ({ children }: { children: React.ReactNode }) => {
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
-    <html
-      suppressHydrationWarning
-      lang={config.language || "en"}
-      style={{ "--primary": config.theme.primaryColor } as React.CSSProperties}
-    >
-      <body suppressHydrationWarning>
+    <html lang="zh-CN" data-scroll-behavior="smooth" suppressHydrationWarning>
+      <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('theme');var d=t==='dark'||(t!=='light'&&matchMedia('(prefers-color-scheme:dark)').matches);document.documentElement.classList.toggle('dark',d)}catch(e){}})()`,
+            __html: `
+              try {
+                if (localStorage.theme === 'dark' || ((!('theme' in localStorage) || localStorage.theme === 'system') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                  document.querySelector('meta[name="theme-color"]').setAttribute('content', '${META_THEME_COLORS.dark}')
+                }
+                if (localStorage.layout) {
+                  document.documentElement.classList.add('layout-' + localStorage.layout)
+                }
+              } catch (_) {}
+            `,
           }}
         />
-        <a
-          href="#main-content"
-          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-background focus:text-foreground focus:rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-        >
-          Skip to content
-        </a>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "WebSite",
-              name: config.title,
-              description: config.description,
-              url: config.url,
-            }),
-          }}
-        />
-        {config.googleAnalyticsId && (
-          <GoogleAnalytics gaId={config.googleAnalyticsId} />
+        <meta name="theme-color" content={META_THEME_COLORS.light} />
+      </head>
+      <body
+        className={cn(
+          "text-foreground group/body overscroll-none font-sans antialiased [--footer-height:calc(var(--spacing)*14)] [--header-height:calc(var(--spacing)*14)] xl:[--footer-height:calc(var(--spacing)*24)]",
+          fontVariables,
         )}
+      >
         <ThemeProvider>
-          <Header />
-          <div className="flex w-full justify-center">
-            <main id="main-content" className="container relative lg:px-8">{children}</main>
-          </div>
+          <SearchProvider>
+            <Suspense>
+              <ProgressBar />
+            </Suspense>
+            {children}
+            <Analytics />
+          </SearchProvider>
         </ThemeProvider>
-              <Analytics />
       </body>
     </html>
   );
-};
-
-export default RootLayout;
+}

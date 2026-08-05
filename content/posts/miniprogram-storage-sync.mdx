@@ -1,0 +1,32 @@
+---
+title: "微信小程序——存、取、清除缓存数据（同步）"
+description: "- 存缓存：wx.setStorageSync(‘key’, data) , data是你要存入的数据"
+date: "2026-07-12"
+tags:
+  - 微信小程序
+published: true
+---
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/108503994
+
+- 存缓存：wx.setStorageSync(‘key’, data) , data是你要存入的数据
+
+- 取缓存： wx.getStorageSync(‘key’)
+
+- 清除指定key的缓存：wx.removeStorageSync(‘key’)
+
+- 清除所有缓存： wx.clearStorageSync()
+
+**.js文件** 
+
+```javascript
+data: {
+address: ''
+},
+demo: function () {
+	wx.setStorageSync('address', res.data.result.ad_info.city) // 存缓存
+this.setData({
+			address: wx.getStorageSync('address') // 取缓存
+		})
+},
+```

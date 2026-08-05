@@ -1,0 +1,25 @@
+---
+title: "Vue——input 中的lazy"
+description: "Vue中input的.lazy修饰符用法详解，让输入值在失去焦点或回车时才更新，而非实时绑定，附完整代码示例。"
+date: "2026-07-11"
+tags:
+  - Vue
+published: true
+---
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/120398818
+
+加入lazy后把searchKey变成change事件改变值
+
+```html
+<input v-model.lazy="searchKey" type="text">
+<h1>
+    {{searchKey}}
+</h1>
+
+data() {
+return {
+searchKey: ''
+}
+}
+```

@@ -1,0 +1,20 @@
+---
+title: "Vue——input输入内容去除空格"
+description: "Vue中去除input输入内容空格的方法，使用.trim()或自定义指令处理表单数据，确保数据准确性。"
+date: "2026-07-11"
+tags:
+  - Vue
+published: true
+---
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/120398796
+
+```html
+<input v-model.trim="searchKey" type="text">
+
+data() {
+return {
+searchKey: ''
+}
+}
+```

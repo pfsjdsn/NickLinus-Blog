@@ -1,0 +1,86 @@
+---
+title: "Vue——$attrs的使用（父组件传值给孙组件）"
+description: "详解Vue中$attrs的用法，实现父组件向孙组件传递数据，包含完整代码示例和多层组件通信技巧。"
+date: "2026-07-11"
+tags:
+  - Vue
+published: true
+---
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/118883034
+
+father(父页面）
+
+```vue
+<template>
+  <div>
+    <son ref="son" :son_name="father_name"></son>
+  </div>
+</template>
+<script>
+import { son } from './components'
+export default ({
+  components: {
+    son
+  },
+  data () {
+    return {
+      father_name: 'jack'
+    }
+  }
+})
+</script>
+```
+
+son(子页面）
+
+```vue
+<template>
+  <div>
+    <grandson ref="grandson" :grandson_name="$attrs.son_name"></grandson>
+  </div>
+</template>
+<script>
+import { grandson } from './components'
+export default ({
+  components: {
+    grandson
+  },
+  created () {
+    console.log(this.$attrs, 'this.$attrs...');
+  },
+  data () {
+    return {
+
+    }
+  }
+})
+</script>
+```
+
+grandson(孙页面）
+
+```vue
+
+<template>
+  <div>内容</div>
+</template>
+<script>
+export default ({
+  props: ['grandson_name'],
+  data () {
+    return {
+      grandson_name: ''
+    }
+  },
+  watch: {
+    'grandson_name': {
+      handler (newVal) {
+        console.log(newVal, 'newVal....');
+        this.$set(this, 'grandson_name', this.grandson_name)
+      }
+    }
+  }
+})
+</script>
+```

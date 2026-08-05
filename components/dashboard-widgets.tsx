@@ -97,7 +97,7 @@ export function DashboardWidgets() {
           </div>
           <div className="flex-1">
             <p className="text-sm font-medium italic text-pink-800 dark:text-pink-200">
-              "{quote.text}"
+              &ldquo;{quote.text}&rdquo;
             </p>
             <p className="mt-1 text-right text-xs text-pink-500 dark:text-pink-400">—— {quote.from}</p>
           </div>

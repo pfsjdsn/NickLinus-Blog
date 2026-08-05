@@ -1,6 +1,6 @@
 "use client";
 
-import { Cat, Dog, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 

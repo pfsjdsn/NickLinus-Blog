@@ -132,7 +132,6 @@ export default function AboutPage() {
         "基于 Next.js 的前端技术博客，分享 Vue、微信小程序等技术实践经验",
       tech: ["Next.js", "TypeScript", "Tailwind CSS", "MDX"],
       link: siteConfig.url,
-      github: siteConfig.links.github,
     },
   ];
 
@@ -328,18 +327,6 @@ export default function AboutPage() {
                     >
                       <ExternalLink className="mr-1 h-3 w-3" />
                       访问
-                    </Link>
-                  </Button>
-                )}
-                {project.github && (
-                  <Button asChild size="sm" variant="outline">
-                    <Link
-                      href={project.github}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <Github className="mr-1 h-3 w-3" />
-                      源码
                     </Link>
                   </Button>
                 )}

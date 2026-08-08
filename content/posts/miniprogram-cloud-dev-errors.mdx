@@ -9,7 +9,7 @@ published: true
 
 > 文章链接：https://blog.csdn.net/qq_43201350/article/details/118882900
 
-![在这里插入图片描述](/images/040_1.png)
+![云开发数据库报错信息](/images/040_1.png)
 
 ```text
 VM849 WAService.js:2 Error: errCode: -502005 database collection not exists | errMsg: [ResourceNotFound] Db or Table not exist. Please check your request, but if the problem cannot be solved, contact us.
@@ -19,7 +19,7 @@ VM849 WAService.js:2 Error: errCode: -502005 database collection not exists | er
 
 集合应为users, 而我写成了user
 
- ![在这里插入图片描述](/images/040_2.png)
+ ![云开发集合名称错误修正](/images/040_2.png)
 
 ```javascript
     db.collection('user').where({

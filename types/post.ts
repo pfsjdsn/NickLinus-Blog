@@ -9,6 +9,7 @@ export interface PostData {
   description: string;
   date: string;
   published: boolean;
+  featured?: boolean;
   tags: string[];
   toc?: TocItem[];
   body?: React.ReactNode;

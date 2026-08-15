@@ -8,7 +8,8 @@ export const siteConfig = {
   postsPerPage: 10,
   links: {
     twitter: "https://twitter.com/NickLinus",
-  } as { twitter?: string },
+    github: "https://github.com/pfsjdsn",
+  } as { twitter?: string; github?: string },
   navItems: [
     {
       href: "/",

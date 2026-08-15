@@ -1,0 +1,52 @@
+---
+title: "JS——JavaScript入门【JavaScript 之 display显示和隐藏】"
+description: "注意:Object是获取的元素对象，如通过 document.getElementById('id') 获取的元素。"
+date: "2023-07-24"
+tags:
+  - JavaScript
+published: true
+featured: true
+---
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/131889928
+
+**语法：** 
+
+```js
+Object.style.display = value
+```
+
+注意:Object是获取的元素对象，如通过 `document.getElementById("id")` 获取的元素。
+
+value取值: none 隐藏； block 显示
+
+使用
+
+```html
+<!DOCTYPE HTML>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=gb2312">
+<title>display</title>
+    <script type="text/javascript"> 
+        function hidetext()  
+		{  
+		var mychar = document.getElementById("con");
+        mychar.style.display='none'
+		}  
+		function showtext()  
+		{  
+		var mychar = document.getElementById("con");
+          mychar.style.display='block'
+		}
+    </script> 
+</head> 
+<body>  
+    <p id="con">文本</p> 
+    <form>
+       <input type="button" onclick="hidetext()" value="隐藏内容" /> 
+       <input type="button" onclick="showtext()" value="显示内容" /> 
+    </form>
+</body> 
+</html>
+```

@@ -1,0 +1,23 @@
+---
+title: "JavaScript——js 模板中字符串中添加空格"
+description: "JavaScript中js 模板中字符串中添加空格的用法与实现方法。"
+date: "2024-02-29"
+tags:
+  - JavaScript
+published: true
+featured: true
+---
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/136360405
+
+```html
+<view> {{abc}} </view>
+```
+
+```js
+  data() {
+    return {
+      abc:`\u00A0\u00A0\u00A0${10}`
+    };
+  },
+```

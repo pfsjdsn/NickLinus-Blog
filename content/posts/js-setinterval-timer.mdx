@@ -1,0 +1,43 @@
+---
+title: "JS——setInterval定时器的使用"
+description: "JavaScript中setInterval定时器的使用的用法与实现方法。"
+date: "2022-07-10"
+tags:
+  - JavaScript
+published: true
+featured: true
+---
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/119145704
+
+```javascript
+ data () {
+    return {
+      timeR: null,
+      timeE: 0,
+    }
+  },
+```
+
+```javascript
+  methods: {
+    demo () {
+      this.timeR = null
+      this.timeR = setInterval(() => {
+        this.timeE += 1
+      }, 1000)
+      // 以下是要使用定时器的函数
+      // this.timeTest() ...
+    },
+    timeTest () {
+      if (this.timeR) {
+        clearInterval(this.timeR)
+        this.timeE = 0
+        console.log('超时了');
+      }
+      return
+      // 以下事件就被中断了
+      // ...
+    }
+  }
+```

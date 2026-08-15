@@ -1,0 +1,27 @@
+---
+title: "JavaScript——js 将一个数组的属性赋值到另一个数组中"
+description: "JavaScript中js 将一个数组的属性赋值到另一个数组中的用法与实现方法。"
+date: "2024-02-29"
+tags:
+  - JavaScript
+published: true
+featured: true
+---
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/136360412
+
+```js
+this.arr1 = [{ name: "张三" }, { name: "李四" }];
+this.arr2 = [
+  { study: true, age: 18 },
+  { study: true, age: 99 },
+];
+this.arr1 = this.arr1.map((item, index) => {
+  const person = this.arr2.find((value, pIndex) => pIndex === index);
+  return { ...item, age: person ? person.age : "" };
+});
+console.log(this.arr1);
+/**
+ * [{age: 18,name: "张三"},{age: 99,name: "李四"}]
+ */
+```

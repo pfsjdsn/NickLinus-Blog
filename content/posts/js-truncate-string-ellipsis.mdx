@@ -1,0 +1,17 @@
+---
+title: "JS——按指定长度截取字符串并加上省略号"
+description: "JavaScript中按指定长度截取字符串并加上省略号的用法与实现方法。"
+date: "2022-08-17"
+tags:
+  - JavaScript
+published: true
+featured: true
+---
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/126385205
+
+```js
+ let str = "测试字符串";
+      str = str.length > 4 ? str.slice(0, 4) + "..." : str;
+      console.log("str", str); // str 测试字符...
+```

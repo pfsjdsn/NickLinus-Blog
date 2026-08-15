@@ -1,0 +1,45 @@
+---
+title: "JS——九九乘法表"
+description: "JavaScript中九九乘法表的用法与实现方法。"
+date: "2023-07-23"
+tags:
+  - JavaScript
+published: true
+featured: true
+---
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/126666956
+
+方式一：整齐排列
+
+```js
+let str = '<table>'
+for (let i = 1; i <=9; i++) {
+        str+= '<tr>'
+    for (let j = 1; j <= i; j++) {
+         str +=  '<td>' + j + '*' + i + '=' + i*j + '<td/>'
+        console.log(str)
+        
+    }
+    str += '</tr>'
+    
+}
+str+='<table/>'
+document.write(str)
+```
+
+ ![](/images/059_1.png)
+
+方式二：不整齐排列
+
+```js
+for (var i = 1; i <= 9; i++) {
+    for (var j = 1; j <= i; j++) {
+      document.write(j + "*" + i + '=' + i * j + '&nbsp;&nbsp;&nbsp;')
+      if (i == j) {
+        document.write("<br/>")
+      }
+
+    }
+  }
+```

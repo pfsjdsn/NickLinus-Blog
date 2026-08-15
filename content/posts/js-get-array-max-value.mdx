@@ -1,0 +1,21 @@
+---
+title: "JS——获取数组中的最大值"
+description: "reduce() 方法接收一个函数作为累加器，数组中的每个值（从左到右）开始缩减，最终计算为一个值。"
+date: "2022-07-10"
+tags:
+  - JavaScript
+published: true
+featured: true
+---
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/121703848
+
+reduce() 方法接收一个函数作为累加器，数组中的每个值（从左到右）开始缩减，最终计算为一个值。
+
+```js
+let  arr = [1, 3, 5, 7,10]      
+let max = arr.reduce((key1, key2) => {
+return key1 = key1 > key2 ? key1 : key2
+});
+console.log(max)   // 10
+```

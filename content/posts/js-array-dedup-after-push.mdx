@@ -1,0 +1,20 @@
+---
+title: "JS——数组去重(push 之后)"
+description: "JavaScript中数组去重(push 之后)的用法与实现方法。"
+date: "2021-07-18"
+tags:
+  - JavaScript
+published: true
+featured: true
+---
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/118882828
+
+```javascript
+let arr1 = []
+let arr2 = [1,2,1,3,3,1]
+let demoList = [...arr1]
+demoList.unshift(arr2)
+let arr = []
+arr = [...new Set(demoList)]
+```

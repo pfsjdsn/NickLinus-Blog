@@ -1,0 +1,34 @@
+---
+title: "JS——JavaScript入门【JavaScript 关闭窗口 window.close 】"
+description: "close()关闭窗口 例如:关闭新建的窗口。"
+date: "2023-07-24"
+tags:
+  - JavaScript
+published: true
+featured: true
+---
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/131889717
+
+close()关闭窗口
+
+用法：
+
+```js
+window.close();   //关闭本窗口
+```
+
+或
+
+```js
+<窗口对象>.close();   //关闭指定的窗口
+```
+
+例如:关闭新建的窗口。
+
+```js
+<script type="text/javascript">
+   var win=window.open('http://www.baidu.com'); //将新打的窗口对象，存储在变量win中
+   win.close();
+</script>
+```

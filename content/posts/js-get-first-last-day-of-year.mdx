@@ -1,0 +1,32 @@
+---
+title: "JavaScript——js获取当年第一天、最后一天"
+description: "以下代码是在uniapp环境中"
+date: "2024-03-07"
+tags:
+  - JavaScript
+published: true
+featured: true
+---
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/136522399
+
+以下代码是在uniapp环境中
+
+```js
+onLoad() {
+    console.log(this.getFirstDayOfYear()); // 输出今年的第一天
+    console.log(this.getLastDayOfYear()); // 输出今年的最后一天
+  },
+   methods:{
+     getFirstDayOfYear() {
+      const now = new Date();
+      const firstDayOfYear = new Date(now.getFullYear(), 0, 1);
+      return firstDayOfYear;
+    },
+    getLastDayOfYear() {
+      const now = new Date();
+      const lastDayOfYear = new Date(now.getFullYear(), 11, 31);
+      return lastDayOfYear;
+    },
+   }
+```

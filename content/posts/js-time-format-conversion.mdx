@@ -1,0 +1,38 @@
+---
+title: "JS——时间格式转化（年-月-日-时-分-秒）"
+description: "JavaScript中时间格式转化（年-月-日-时-分-秒）的用法与实现方法。"
+date: "2022-07-10"
+tags:
+  - JavaScript
+published: true
+featured: true
+---
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/119996195
+
+```javascript
+    getTime (myDate) {
+      console.log(123);
+      let date = new Date(myDate * 1000)
+      let Y = date.getFullYear() + '-';
+      let M = (date.getMonth() + 1 < 10 ? '0' + (date.getMonth() + 1) : date.getMonth() + 1) + '-';
+      let D = date.getDate() + ' ';
+      let h = date.getHours();
+      let m = date.getMinutes();
+      let s = date.getSeconds();
+      if (D < 10) {
+        D = '0' + D
+      }
+      if (h < 10) {
+        console.log(1);
+        h = '0' + h
+      }
+      if (m < 10) {
+        m = '0' + m
+      }
+      if (s < 10) {
+        s = '0' + s
+      }
+      return Y + M + D + h + ':' + m + ':' + s
+    },
+```

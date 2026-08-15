@@ -9,6 +9,9 @@ export function getAllPosts(): PostListItem[] {
   const pages = (source.getPages() as unknown as PostListItem[])
     .filter((p) => (p?.data?.published ?? true) === true)
     .sort((a, b) => {
+      const fa = a?.data?.featured ? 1 : 0;
+      const fb = b?.data?.featured ? 1 : 0;
+      if (fa !== fb) return fb - fa;
       const da = a?.data?.date ? new Date(a.data.date).getTime() : 0;
       const db = b?.data?.date ? new Date(b.data.date).getTime() : 0;
       return db - da;

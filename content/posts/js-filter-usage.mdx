@@ -1,0 +1,20 @@
+---
+title: "JS——filter过滤的用法"
+description: "JavaScript中filter过滤的用法的用法与实现方法。"
+date: "2022-07-30"
+tags:
+  - JavaScript
+published: true
+featured: true
+---
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/118882760
+
+```javascript
+let messageId =  '1'
+let list = [{name: 'a', id: '1'}, {name: 'b', id: '2'}, {name: 'c', id: '3'}]
+list  = list.filter((val, i) => {
+return val.id !== messageId
+})
+console.log(list) // [{name: 'b', id: '2'}, {name: 'c', id: '3'}]
+```

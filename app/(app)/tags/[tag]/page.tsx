@@ -8,8 +8,7 @@ import { PaginationNav } from "@/components/pagination-nav";
 import { PostList } from "@/components/post-list";
 
 export const revalidate = false;
-export const dynamic = "force-static";
-export const dynamicParams = false;
+export const dynamicParams = true;
 
 export function generateStaticParams() {
   return getTagStaticParams();
@@ -18,7 +17,8 @@ export function generateStaticParams() {
 export default async function TagPage(props: {
   params: Promise<{ tag: string }>;
 }) {
-  const { tag } = await props.params;
+  const { tag: rawTag } = await props.params;
+  const tag = decodeURIComponent(rawTag);
   const filtered = getPostsByTag(tag);
   if (filtered.length === 0) notFound();
 

@@ -1,0 +1,53 @@
+---
+title: "JavaScript——js 获取当天时间后 5 天日期"
+description: "把代码放入src/utils/utils.js 中"
+date: "2024-01-12"
+tags:
+  - JavaScript
+published: true
+featured: true
+---
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/135542706
+
+```js
+export function getDay(day) {
+  var today = new Date();
+  var targetday_milliseconds = today.getTime() + 1000 * 60 * 60 * 24 * day;
+  today.setTime(targetday_milliseconds);
+  var tYear = today.getFullYear();
+  var tMonth = today.getMonth();
+  var tDate = today.getDate();
+  tMonth = doHandleMonth(tMonth + 1);
+  tDate = doHandleMonth(tDate);
+  return tYear + "-" + tMonth + "-" + tDate;
+}
+```
+
+```js
+export function doHandleMonth(month) {
+  var m = month;
+  if (month.toString().length == 1) {
+    m = "0" + month;
+  }
+  return m;
+}
+```
+
+把代码放入src/utils/utils.js 中
+
+引入并使用
+
+```js
+<script>
+import { getDay } from "@/src/utils/utils.js";
+export default {
+  methods: {
+    do(){
+      let day = getDay(5)
+      console.log(day, '获取当天时间后5天日期');
+    }
+  },
+};
+</script>
+```

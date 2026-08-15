@@ -1,0 +1,20 @@
+---
+title: "JavaScript——js对象数组中指定属性拼成字符串"
+description: "JavaScript中js对象数组中指定属性拼成字符串的用法与实现方法。"
+date: "2024-03-01"
+tags:
+  - JavaScript
+published: true
+featured: true
+---
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/136385412
+
+```js
+const arr=[
+    {name:'a',id:'aa'},
+    {name:'b',id:'bb'}
+];
+
+arr.map((obj)=>{return "'"+obj.id+"'"}).join(","); // "'aa','bb'"
+```

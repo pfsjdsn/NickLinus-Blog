@@ -1,0 +1,24 @@
+---
+title: "JavaScript—— js中 获取指定日期的后一天"
+description: "Date.prototype.toISOString() toISOString() 方法返回一个 ISO（ISO 8601 Extended Format）格式的字符串： YYYY-MM-DD..."
+date: "2024-01-11"
+tags:
+  - JavaScript
+published: true
+featured: true
+---
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/135517021
+
+Date.prototype.toISOString()
+
+toISOString() 方法返回一个 ISO（ISO 8601 Extended Format）格式的字符串： YYYY-MM-DDTHH:mm:ss.sssZ。时区总是 UTC（协调世界时），加一个后缀“Z”标识。
+
+[MDN相关文档](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Date/toISOString) 
+
+```js
+const myDay = new Date("2024-01-11");
+myDay.setDate(myDay.getDate() + 1);
+const nextDay = myDay.toISOString().slice(0, 10);
+console.log(nextDay); // 输出 "2023-01-12"
+```

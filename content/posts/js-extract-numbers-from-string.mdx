@@ -1,0 +1,27 @@
+---
+title: "JS——js截取字符串中的数字"
+description: "JavaScript中js截取字符串中的数字的用法与实现方法。"
+date: "2022-07-10"
+tags:
+  - JavaScript
+published: true
+featured: true
+---
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/109627318
+
+## 1，使用parseInt()
+
+```dart
+var str ="4500元";
+var num = parseInt(str);
+alert(num);//4500
+```
+
+2，使用正则
+
+```text
+var s ="价格4500元";
+var num= s.replace(/[^0-9]/ig,"");
+alert(num);//4500
+```

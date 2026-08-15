@@ -1,0 +1,68 @@
+---
+title: "JavaScript——js 获取当前时间与数据返回时间 分钟/小时差"
+description: "JavaScript中js 获取当前时间与数据返回时间 分钟/小时差的用法与实现方法。"
+date: "2024-01-22"
+tags:
+  - JavaScript
+published: true
+featured: true
+---
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/135759512
+
+```html
+<template>
+  <view @click="do">获取分钟/小时差</view>
+</template>
+```
+
+```js
+<script>
+import {getMinuteDifference } from "@/src/utils/utils.js";
+export default {
+  data() {
+    return {
+      data: {},
+    };
+  },
+  methods: {
+    do(){
+      let time = '2024-01-16 16:54:26'
+      getMinuteDifference(time)
+    }
+
+  },
+};
+</script>
+```
+
+utils.js
+
+```js
+//  获取分钟/小时差
+export function getMinuteDifference(start) {
+  let startData = new Date(start);
+  let stopData = new Date();
+  let startTime = startData.getTime();
+  let stopTime = stopData.getTime();
+  let ctiTime = Number(stopTime) - Number(startTime);
+  let secondTime = "";
+  if (ctiTime / 1000 / 60 / 60 > 24) {
+    secondTime =
+      Math.floor(ctiTime / 1000 / 60 / 60 / 24) === 0
+        ? 1 + "天前"
+        : Math.floor(ctiTime / 1000 / 60 / 60 / 24) + "天前";
+  } else if (ctiTime / 1000 / 60 > 60) {
+    secondTime =
+      Math.floor(ctiTime / 1000 / 60 / 60) === 0
+        ? 1 + "小时前"
+        : Math.floor(ctiTime / 1000 / 60 / 60) + "小时前";
+  } else {
+    secondTime =
+      Math.floor(ctiTime / 1000 / 60) === 0
+        ? 1 + "分钟前"
+        : Math.floor(ctiTime / 1000 / 60) + "分钟前";
+  }
+  return secondTime;
+}
+```

@@ -1,0 +1,45 @@
+---
+title: "JS——js 保存2位小数、以及百分比"
+description: "JavaScript中js 保存2位小数、以及百分比的用法与实现方法。"
+date: "2022-07-10"
+tags:
+  - JavaScript
+published: true
+featured: true
+---
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/117631054
+
+```c
+methods: {
+
+},
+
+filters: {
+    // 只显示到两位小数点
+    rounding (value) {
+      // console.log(value);
+      return value.toFixed(2)
+      // console.log(value);
+    },
+    // 以百分比显示
+    percent (value, fmt) {
+      if (value !== '') {
+        return `${((value || 0) * 100).toFixed(fmt || 2)}%`
+      } else {
+        return value
+      }
+    },
+}
+data: 
+使用：
+  data () {
+    return {
+demo: 2.33323
+
+}
+}
+ <span>{{demo | rounding}}</span>
+<span>{{demo | percent}}</span>
+
+```

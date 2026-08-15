@@ -1,0 +1,39 @@
+---
+title: "JS——日期的横杠、斜杠相互替换"
+description: "JavaScript中日期的横杠、斜杠相互替换的用法与实现方法。"
+date: "2022-07-10"
+tags:
+  - JavaScript
+published: true
+featured: true
+---
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/109183917
+
+1、横杠替换成斜杠
+
+### replace()
+
+- 只替换第一个
+
+```javascript
+      let dt = "2010-01-05";     
+      let  dt = dt.replace("-","/"); 
+      //只替换第一个“-”：2010/01-05
+```
+
+- 替换所有
+
+```javascript
+     let dt = "2010-01-05";    
+     let  dt = dt.replace(/-/g,"/"); 
+     //替换所有“-”，g为全局标志，另外如果加i就忽略大小写：2010/01/05
+```
+
+2、斜杠替换为横杠
+
+```javascript
+  let dt = "2010-01-05";    
+     let  dt = dt.replace(/\//g,"-"); 
+     //替换所有“/”，g为全局标志，另外如果加i就忽略大小写：2010-01-05
+```

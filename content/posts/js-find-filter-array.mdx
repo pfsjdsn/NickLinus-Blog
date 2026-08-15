@@ -1,0 +1,50 @@
+---
+title: "JS——find过滤数组"
+description: "JavaScript中find过滤数组的用法与实现方法。"
+date: "2021-05-05"
+tags:
+  - JavaScript
+published: true
+featured: true
+---
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/116430754
+
+```html
+<template>
+  <div>
+    <button @click="myClick">过滤数组</button>
+  </div>
+</template>
+<script>
+export default {
+  data () {
+    return {
+      allName: 'nick',
+      list: [
+        {
+          id: 0,
+          name: 'jack'
+        },
+        {
+          id: 1,
+          name: 'nick'
+        },
+        {
+          id: 2,
+          name: 'Lili'
+        }
+      ]
+    }
+  },
+  methods: {
+      myClick () {
+        let obj = this.list.find(item => {
+          return item.name === this.allName
+        })
+        console.log(obj) // 输入内容为 {id: 1,name: 'nick'}
+      },
+    }
+}
+</script>
+```

@@ -1,0 +1,49 @@
+---
+title: "JavaScript——js 将日期转化成对应的星期数"
+description: "把文件放入src/utils/utils.js 中"
+date: "2024-01-11"
+tags:
+  - JavaScript
+published: true
+featured: true
+---
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/135517031
+
+```js
+export default getWeek (){
+    let newNum = new Date(newStr).getDay();
+    let week =
+      newNum === 0
+        ? "周日"
+        : newNum === 1
+        ? "周一"
+        : newNum === 2
+        ? "周二"
+        : newNum === 3
+        ? "周三"
+        : newNum === 4
+        ? "周四"
+        : newNum === 5
+        ? "周五"
+        : newNum === 6
+        ? "周六"
+        : "";
+        return week
+}
+```
+
+把文件放入src/utils/utils.js 中
+
+引入并使用
+
+```js
+import { getWeek } from "@/src/utils/utils.js";
+export default {
+  methods: {
+    do() {
+      getWeek();
+    },
+  },
+};
+```

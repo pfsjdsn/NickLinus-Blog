@@ -1,0 +1,45 @@
+---
+title: "JavaScript—— js 中数组 push 对象，总是被最后一次的值覆盖的解决方法"
+description: "Object.assign(target, …sources) 将一个或者多个源对象中所有可枚举的自有属性复制到目标对象，并返回修改后的目标对象"
+date: "2024-01-11"
+tags:
+  - JavaScript
+published: true
+featured: true
+---
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/135517001
+
+**方法一** 
+Object.assign(target, …sources)
+将一个或者多个源对象中所有可枚举的自有属性复制到目标对象，并返回修改后的目标对象
+
+target——>目标对象
+source——>源对象
+
+[MDN文档-Object.assign](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Object/assign) 
+
+```js
+let arr = [];
+let obj = { name: "小明" };
+arr.push(Object.assign({}, obj)); // 创建一个新对象并将其添加到数组中
+console.log(arr); // [{name: "小明"}]
+
+```
+
+**方法二** 
+
+循环外定义数组
+循环内定义对象
+
+```js
+var data = { a:'123', b: '456', c: '789'};
+var dataArr = [];
+for(var i indata){
+var dataObj = {};//在里面定义对象
+    dataObj.name= data[i];
+    dataArr.push(dataObj);
+}
+console.log(dataArr)
+
+```

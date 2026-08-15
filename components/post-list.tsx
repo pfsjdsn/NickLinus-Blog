@@ -47,7 +47,7 @@ export function PostList({
                   {post.tags.map((t: string) => (
                     <Badge key={t} asChild variant="secondary">
                       <Link
-                        href={`/tags/${t}`}
+                        href={`/tags/${encodeURIComponent(t)}`}
                         className="flex items-center gap-1"
                       >
                         <span>{t}</span>

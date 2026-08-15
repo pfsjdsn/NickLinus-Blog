@@ -37,6 +37,7 @@ export const docs = defineDocs({
       date: z.string(),
       tags: z.array(z.string()).optional(),
       published: z.boolean().optional(),
+      featured: z.boolean().optional(),
       links: z
         .object({
           doc: z.string().optional(),

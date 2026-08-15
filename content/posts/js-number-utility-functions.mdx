@@ -1,0 +1,39 @@
+---
+title: "JavaScript—— 数字处理工具函数"
+description: "数字处理在各种业务场景中都很常见，尤其是涉及到金额计算、数据显示等方面。"
+date: "2025-12-24"
+tags:
+  - JavaScript
+published: true
+featured: true
+---
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/156240783
+
+### 2. 数字处理工具函数
+
+数字处理在各种业务场景中都很常见，尤其是涉及到金额计算、数据显示等方面。
+
+```javascript
+// 添加千分位分隔符
+function addThousandSeparator(num, decimals = 2) {
+  if (!num && num !== 0) return '-';
+  // 实现逻辑...
+  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+// 数字补零
+function padNumber(num, length = 2) {
+  return num.toString().padStart(length, '0');
+}
+
+// 获取指定范围的随机数
+function getRandomNumber(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+// 使用示例
+console.log(addThousandSeparator(1234567.89)); // 输出: 1,234,567.89
+console.log(padNumber(5, 3)); // 输出: 005
+console.log(getRandomNumber(10, 20)); // 输出: 10-20之间的随机整数
+```

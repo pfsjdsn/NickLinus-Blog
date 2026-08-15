@@ -1,0 +1,20 @@
+---
+title: "JavaScript——js 截取指定字符串前后的所有字符"
+description: "JavaScript中js 截取指定字符串前后的所有字符的用法与实现方法。"
+date: "2024-01-26"
+tags:
+  - JavaScript
+published: true
+featured: true
+---
+
+> 文章链接：https://blog.csdn.net/qq_43201350/article/details/135870344
+
+```js
+let str = "/static/deom/abc.png";
+let index = str.lastIndexOf("/");
+//  '/' 前的所有字符
+str = str.substring(0, index);
+// '/' 后的所有字符
+str = str.substring(index + 1, str.length);
+```

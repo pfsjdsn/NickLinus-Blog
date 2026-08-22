@@ -43,7 +43,7 @@ export function getTagStaticParams() {
   for (const p of getAllPosts()) {
     for (const t of p?.data?.tags ?? []) set.add(t);
   }
-  return Array.from(set).map((t) => ({ tag: t }));
+  return Array.from(set).map((t) => ({ tag: encodeURIComponent(t) }));
 }
 
 export function getTagPageStaticParams(perPage?: number) {
@@ -56,7 +56,7 @@ export function getTagPageStaticParams(perPage?: number) {
   const eff = perPage ?? siteConfig.postsPerPage ?? 10;
   for (const [t, count] of tags) {
     const total = Math.max(1, Math.ceil(count / eff));
-    for (let i = 1; i <= total; i++) paths.push({ tag: t, page: String(i) });
+    for (let i = 1; i <= total; i++) paths.push({ tag: encodeURIComponent(t), page: String(i) });
   }
   return paths;
 }

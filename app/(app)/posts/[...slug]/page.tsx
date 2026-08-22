@@ -113,7 +113,7 @@ export default async function PostPage(props: {
           <CardFooter className="flex flex-wrap gap-2 pt-4">
             {post.tags.map((tag: string) => (
               <Badge key={tag} asChild variant="secondary">
-                <Link href={`/tags/${tag}`} className="flex items-center gap-1">
+                <Link href={`/tags/${encodeURIComponent(tag)}`} className="flex items-center gap-1">
                   <span>{tag}</span>
                 </Link>
               </Badge>

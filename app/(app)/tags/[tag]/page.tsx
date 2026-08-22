@@ -41,7 +41,7 @@ export default async function TagPage(props: {
             totalPages={totalPages}
             hasPrevPage={false}
             hasNextPage={currentPage < totalPages}
-            baseUrl={`/tags/${tag}/page`}
+            baseUrl={`/tags/${encodeURIComponent(tag)}/page`}
           />
         ) : null}
       </div>

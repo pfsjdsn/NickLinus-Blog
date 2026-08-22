@@ -32,7 +32,7 @@ export default async function TagPaged(props: {
   const perPage = siteConfig.postsPerPage ?? 10;
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
   if (n > totalPages) notFound();
-  if (n === 1) redirect(`/tags/${tag}`);
+  if (n === 1) redirect(`/tags/${encodeURIComponent(tag)}`);
 
   const start = (n - 1) * perPage;
   const items = filtered.slice(start, start + perPage);
@@ -50,7 +50,7 @@ export default async function TagPaged(props: {
           totalPages={totalPages}
           hasPrevPage={n > 1}
           hasNextPage={n < totalPages}
-          baseUrl={`/tags/${tag}/page`}
+          baseUrl={`/tags/${encodeURIComponent(tag)}/page`}
         />
       </div>
     </MainLayout>

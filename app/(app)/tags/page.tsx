@@ -28,7 +28,7 @@ export default async function TagsIndexPage() {
             <div className="flex flex-wrap gap-2">
               {tags.map(([t, count]) => (
                 <Badge key={t} asChild variant="secondary">
-                  <Link href={`/tags/${t}`}>
+                  <Link href={`/tags/${encodeURIComponent(t)}`}>
                     {t} ({count})
                   </Link>
                 </Badge>
